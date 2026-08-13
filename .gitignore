@@ -1,0 +1,8 @@
+node_modules/
+dist/
+server/data/
+.env
+work/
+*.7z
+cochpia-preview.html
+client/cochpia-app-preview.html
