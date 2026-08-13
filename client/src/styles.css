@@ -281,6 +281,10 @@ html[data-animation="disabled"] .ambient-layer *, html[data-animation="disabled"
 .channel-tab.active { color:var(--text-strong); background:var(--accent-soft); border-color:var(--accent-glow); }
 .channel-count { font-size:9px; color:var(--text-muted); background:var(--surface-elevated); border-radius:9px; padding:1px 6px; }
 .channel-add { padding:7px 11px; }
+.chat-search { flex:1; min-width:120px; max-width:220px; border:1px solid var(--border-default); border-radius:999px; background:#fff; color:var(--text-body); padding:6px 13px; font-size:11px; outline:none; font-family:var(--font-ui); }
+.chat-search::placeholder { color:var(--text-muted); }
+.date-sep { text-align:center; margin:20px 0 12px; }
+.date-sep span { font-size:10px; color:var(--text-muted); background:rgba(255,255,255,.65); padding:3px 13px; border-radius:999px; }
 
 /* 人格面板 */
 .persona-panel { padding:16px; border-bottom:1px solid var(--border-default); }

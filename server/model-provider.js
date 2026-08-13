@@ -38,6 +38,13 @@ function modelRequestError(response, payload) {
   return error;
 }
 
+function currentTimeText() {
+  const now = new Date();
+  const week = ['日', '一', '二', '三', '四', '五', '六'];
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${week[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
 export function resolveModelConfig(provider = process.env.MODEL_PROVIDER || 'mock', overrides = {}) {
   const preset = MODEL_PRESETS[provider];
   if (!preset) return { provider, label: provider, protocol: 'unknown', ready: false, error: `Unsupported model provider: ${provider}` };
@@ -90,7 +97,7 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
       ? `\n\n临近日程：\n${runtimeContext.upcomingEvents.map(event => `- ${event.title}（${String(event.date).slice(0, 10)}${event.note ? `，备注：${event.note}` : ''}）`).join('\n')}`
       : '';
     const atmosphere = runtimeContext?.atmosphere ? `\n\n互动氛围：${runtimeContext.atmosphere}` : '';
-    const system = `${basePrompt}\n\n相关记忆：\n${context}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
+    const system = `${basePrompt}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
     return { system, user: String(message) };
   };
 

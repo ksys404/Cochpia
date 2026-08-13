@@ -60,6 +60,16 @@ function takeSegment(buffer) {
   return null;
 }
 
+function dateLabel(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (same(d, now)) return '今天';
+  if (same(d, yest)) return '昨天';
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
+}
+
 function splitSegments(text) {
   const segments = [];
   let rest = String(text || '');
@@ -76,8 +86,8 @@ function splitSegments(text) {
 
 function App() {
   const { state: workspacePreferences, setSetting: setWorkspaceSetting } = useWorkspacePreferences();
-  const { formatTime, formatDateTime } = useTime();
-  const workspaceClock = <time className="workspace-clock" dateTime={new Date().toISOString()}>{workspacePreferences.time.showDate && <span>{formatDateTime()}</span>}<b>{formatTime()}</b></time>;
+  const { formatTime, formatDate } = useTime();
+  const workspaceClock = <time className="workspace-clock" dateTime={new Date().toISOString()}>{workspacePreferences.time.showDate && <span>{formatDate()}</span>}<b>{formatTime()}</b></time>;
   const { playUiSound } = useAudio();
   const { restoreWindow, focusWindow } = useWindowManager();
   const [user, setUser] = useState(null);
@@ -115,6 +125,7 @@ function App() {
   const nearBottomRef = useRef(true);
   const streamStateRef = useRef({ currentId: null, buffer: '', pausing: false, timer: null, counter: 0 });
   const [jumpToBottom, setJumpToBottom] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [channel, setChannel] = useState('默认');
   const [channels, setChannels] = useState([]);
   const [events, setEvents] = useState([]);
@@ -368,6 +379,21 @@ function App() {
     });
     return flat;
   }, [messages]);
+  const filteredMessages = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return displayMessages;
+    return displayMessages.filter(item => String(item.content || '').toLowerCase().includes(q));
+  }, [displayMessages, searchQuery]);
+  const groupedMessages = useMemo(() => {
+    const result = [];
+    let last = '';
+    for (const item of filteredMessages) {
+      const label = dateLabel(item.createdAt);
+      if (label !== last) { result.push({ type: 'date', key: `d:${label}`, label }); last = label; }
+      result.push(item);
+    }
+    return result;
+  }, [filteredMessages]);
   useEffect(() => {
     if (nearBottomRef.current) {
       const el = conversationRef.current;
@@ -613,7 +639,7 @@ function App() {
 
     <aside className="sidebar"><div className="brand"><span className="brand-mark">C</span><div><strong>Cochpia</strong><span>relationship workspace</span></div></div><button className="new-chat" onClick={newSession}><span>+</span> 新的相遇</button><div className="section-label">会话</div><nav className="session-list">{sessions.map(session => <button key={session.id} className={session.id === sessionId ? 'session active' : 'session'} onClick={() => load(session.id)}><span className="session-dot" />{session.title}</button>)}</nav><div className="sidebar-foot"><span className="status-dot" />本地开发模式<span className="version">v0.1</span><button type="button" className="text-button" onClick={exportData}>导出</button><label className="text-button import-label">导入<input type="file" accept="application/json,.json" onChange={importData} hidden /></label></div></aside>
 
-    <main className="main-panel"><header className="topbar"><div><p className="eyebrow">LIVE RELATIONSHIP LOG</p><h1>与你共同成长的空间</h1></div><div className="top-actions"><button className="icon-button" aria-label="切换主题" title="切换主题" onClick={() => setWorkspaceSetting('theme', 'themeId', workspacePreferences.theme.themeId === 'sakura' ? 'ink' : 'sakura')}>◐</button><span className="connection"><span className="status-dot" /> SSE 已连接</span></div></header><div className="channel-bar">{channels.map(item => <button type="button" key={item.name} className={item.name === channel ? 'channel-tab active' : 'channel-tab'} onClick={() => switchChannel(item.name)}>{item.name}<span className="channel-count">{item.count}</span></button>)}<button type="button" className="channel-tab channel-add" aria-label="新建频道" title="新建频道" onClick={addChannel}>＋</button></div><div className="conversation" ref={conversationRef} onScroll={onConversationScroll}>{messages.length === 0 && <div className="empty-state"><span className="empty-mark">01</span><h2>从一段真实的分享开始</h2><p>每次对话都会成为可审计的共同经历，只有重要的内容才会进入长期记忆。</p></div>}{displayMessages.map(message => <article key={message.key} className={`message ${message.role}${message.grouped ? ' grouped' : ''}`}><div className="avatar">{message.role === 'assistant' ? (message.senderAvatar || 'C') : '你'}</div><div className="message-content"><div className="message-meta">{message.role === 'assistant' ? (message.senderName || 'Cochpia') : '你'}<time dateTime={message.createdAt}>{formatTime(message.createdAt)}</time></div>{editingMessageId === message.id && message.lastInGroup ? <div className="message-edit"><textarea value={editingText} onChange={event => setEditingText(event.target.value)} autoFocus /><div><button type="button" className="text-button" onClick={() => saveMessageEdit(message.id)}>保存</button><button type="button" className="text-button muted-button" onClick={cancelEditingMessage}>取消</button></div></div> : <><div className="bubble">{message.content || <span className="typing">正在形成回应<span>.</span><span>.</span><span>.</span></span>}{message.isStreaming && message.content ? <span className="typing-cursor" /> : null}</div>{message.lastInGroup && !('isStreaming' in message) && <div className="message-actions"><button type="button" className="text-button" onClick={() => startEditingMessage(message)}>编辑</button><button type="button" className="text-button danger-button" onClick={() => removeMessage(message.id)}>删除</button></div>}</>}</div></article>)}{jumpToBottom && <button className="jump-bottom" onClick={() => { nearBottomRef.current = true; setJumpToBottom(false); scrollToBottom('smooth'); }} aria-label="回到底部" title="回到底部">↓</button>}</div><form className="composer" onSubmit={sendMessage}><textarea value={input} onChange={event => setInput(event.target.value)} disabled={streaming} placeholder="写下此刻想分享的事…" rows="1" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(event); } }} /><button className="send-button" disabled={streaming || !input.trim()} aria-label="发送消息" title="发送消息">↑</button><div className="composer-note">Enter 发送 · Shift + Enter 换行</div></form></main>
+    <main className="main-panel"><header className="topbar"><div><p className="eyebrow">LIVE RELATIONSHIP LOG</p><h1>与你共同成长的空间</h1></div><div className="top-actions"><button className="icon-button" aria-label="切换主题" title="切换主题" onClick={() => setWorkspaceSetting('theme', 'themeId', workspacePreferences.theme.themeId === 'sakura' ? 'ink' : 'sakura')}>◐</button><span className="connection"><span className="status-dot" /> SSE 已连接</span></div></header><div className="channel-bar">{channels.map(item => <button type="button" key={item.name} className={item.name === channel ? 'channel-tab active' : 'channel-tab'} onClick={() => switchChannel(item.name)}>{item.name}<span className="channel-count">{item.count}</span></button>)}<button type="button" className="channel-tab channel-add" aria-label="新建频道" title="新建频道" onClick={addChannel}>＋</button><input className="chat-search" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="搜索聊天记录" /></div><div className="conversation" ref={conversationRef} onScroll={onConversationScroll}>{messages.length === 0 && <div className="empty-state"><span className="empty-mark">01</span><h2>从一段真实的分享开始</h2><p>每次对话都会成为可审计的共同经历，只有重要的内容才会进入长期记忆。</p></div>}{groupedMessages.map(item => item.type === 'date' ? <div key={item.key} className="date-sep"><span>{item.label}</span></div> : <article key={item.key} className={`message ${item.role}${item.grouped ? ' grouped' : ''}`}><div className="avatar">{item.role === 'assistant' ? (item.senderAvatar || 'C') : '你'}</div><div className="message-content"><div className="message-meta">{item.role === 'assistant' ? (item.senderName || 'Cochpia') : '你'}<time dateTime={item.createdAt}>{formatTime(item.createdAt)}</time></div>{editingMessageId === item.id && item.lastInGroup ? <div className="message-edit"><textarea value={editingText} onChange={event => setEditingText(event.target.value)} autoFocus /><div><button type="button" className="text-button" onClick={() => saveMessageEdit(item.id)}>保存</button><button type="button" className="text-button muted-button" onClick={cancelEditingMessage}>取消</button></div></div> : <><div className="bubble">{item.content || <span className="typing">正在形成回应<span>.</span><span>.</span><span>.</span></span>}{item.isStreaming && item.content ? <span className="typing-cursor" /> : null}</div>{item.lastInGroup && !('isStreaming' in item) && <div className="message-actions"><button type="button" className="text-button" onClick={() => startEditingMessage(item)}>编辑</button><button type="button" className="text-button danger-button" onClick={() => removeMessage(item.id)}>删除</button></div>}</>}</div></article>)}{jumpToBottom && <button className="jump-bottom" onClick={() => { nearBottomRef.current = true; setJumpToBottom(false); scrollToBottom('smooth'); }} aria-label="回到底部" title="回到底部">↓</button>}</div><form className="composer" onSubmit={sendMessage}><textarea value={input} onChange={event => setInput(event.target.value)} disabled={streaming} placeholder="写下此刻想分享的事…" rows="1" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(event); } }} /><button className="send-button" disabled={streaming || !input.trim()} aria-label="发送消息" title="发送消息">↑</button><div className="composer-note">Enter 发送 · Shift + Enter 换行</div></form></main>
 
     <div className="window-layer"><FloatingWindow id="inspector" title="共同状态"><aside className="inspector"><div className="inspector-head"><div><p className="eyebrow">COGNITIVE STATE</p><h2>共同状态</h2></div><span className="live-pill">LIVE</span></div><section className="state-card"><div className="state-card-top"><span className="state-icon">✦</span><div><strong>关系正在形成</strong><span>基于共同事件持续更新</span></div></div><div className="state-line"><span>共享记忆</span><strong>{memory.count}</strong></div><div className="state-line"><span>人格版本</span><strong>v{personality?.version || 1}</strong></div></section><MaterialPreview /><section className="inspector-section"><div className="section-heading"><span>人格趋势</span><button type="button" className="text-button" onClick={() => setHistoryOpen(true)}>查看版本</button></div>{(personality?.traits || []).map(trait => <div className="trait" key={trait.key}><div><span>{trait.label}</span><b>{Math.round(trait.value * 100)}%</b></div><div className="progress"><i style={{ width: `${trait.value * 100}%` }} /></div></div>)}</section><section className="inspector-section"><div className="section-heading"><span>最近记忆</span><span className="count-label">{memory.count} 条</span></div>{memory.memories.slice(0, 3).map(item => <div className="memory-item" key={item.id}><span className="memory-type">{item.type === 'relationship' ? '关系' : '事件'}</span><p>{item.summary}</p><small>{Math.round(item.confidence * 100)}% 确信 · {item.source}</small></div>)}</section><section className="inspector-section"><div className="section-heading"><span>成长证据</span><button type="button" className="text-button" onClick={() => setGrowthOpen(true)}>查看时间线</button></div>{growthEvidence.slice(0, 2).map(item => <div className="memory-item" key={item.id}><span className="memory-type">{item.status || 'draft'}</span><p>{item.claim}</p><small>{item.evidence}</small></div>)}</section><section className="protocol-note"><span>◎</span><p><strong>可验证成长</strong>每次人格变化都保留证据和版本，后续可回滚。</p></section></aside></FloatingWindow></div><WindowDock />
 
