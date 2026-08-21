@@ -1,0 +1,28 @@
+{
+  "name": "cochpia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node server/index.js\" \"vite --host 0.0.0.0\"",
+    "server": "node server/index.js",
+    "test": "node --test server/*.test.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "start:web": "node services/web-static.js",
+    "migrate:postgres": "node server/migrate-json-to-postgres.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.2",
+    "@vitejs/plugin-react": "latest",
+    "concurrently": "latest",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "latest",
+    "jose": "^6.2.8",
+    "pg": "^8.23.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  }
+}
