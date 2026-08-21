@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import { getTypographyFont } from './typographyRegistry';
+import { api, supabase } from '../api';
 
 const STORAGE_KEY = 'cochpia.workspace-preferences.v1';
 
@@ -21,11 +22,21 @@ const mergeState = value => Object.keys(defaults).reduce((result, key) => {
   return result;
 }, {});
 
-const readState = () => {
-  try { return mergeState(JSON.parse(window.localStorage.getItem(STORAGE_KEY) || 'null')); } catch { return mergeState(); }
+const readState = (storageKey = STORAGE_KEY, legacyKey = '') => {
+  try {
+    const stored = window.localStorage.getItem(storageKey) || (legacyKey ? window.localStorage.getItem(legacyKey) : null);
+    return mergeState(JSON.parse(stored || 'null'));
+  } catch { return mergeState(); }
+};
+
+const storageKeyFor = session => session?.user?.id ? `${STORAGE_KEY}.${session.user.id}` : STORAGE_KEY;
+
+const saveLocalState = (storageKey, state) => {
+  try { window.localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Storage is optional. */ }
 };
 
 const reducer = (state, action) => {
+  if (action.type === 'REPLACE_STATE') return mergeState(action.value);
   if (action.type === 'RESET_ALL') return mergeState();
   if (action.type === 'RESET_SLICE') return { ...state, [action.slice]: { ...defaults[action.slice] } };
   if (action.type === 'SET_SETTING') {
@@ -74,6 +85,45 @@ const WorkspacePreferencesContext = createContext(null);
 
 export function WorkspacePreferencesProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, readState);
+  const [remoteReady, setRemoteReady] = React.useState(false);
+  const [activeStorageKey, setActiveStorageKey] = React.useState(STORAGE_KEY);
+  const [hydrationVersion, setHydrationVersion] = React.useState(0);
+
+  useEffect(() => {
+    let active = true;
+    let requestVersion = 0;
+    const hydrate = async session => {
+      const version = ++requestVersion;
+      const storageKey = storageKeyFor(session);
+      const fallback = readState(storageKey, session ? STORAGE_KEY : '');
+      setRemoteReady(false);
+      setActiveStorageKey(storageKey);
+      try {
+        const payload = await api('/api/preferences');
+        if (!active || version !== requestVersion) return;
+        const next = payload?.preferences ? mergeState(payload.preferences) : fallback;
+        dispatch({ type: 'REPLACE_STATE', value: next });
+        saveLocalState(storageKey, next);
+      } catch {
+        if (!active || version !== requestVersion) return;
+        dispatch({ type: 'REPLACE_STATE', value: fallback });
+      } finally {
+        if (active && version === requestVersion) {
+          setHydrationVersion(current => current + 1);
+          setRemoteReady(true);
+        }
+      }
+    };
+
+    if (!supabase) {
+      hydrate(null);
+      return () => { active = false; };
+    }
+    supabase.auth.getSession().then(({ data }) => hydrate(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { hydrate(session); });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, []);
+
   useEffect(() => {
     Object.entries(cssVariables(state)).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
     // 自定义色卡：themeId === 'custom' 时用用户自定义颜色覆盖主题变量
@@ -93,8 +143,16 @@ export function WorkspacePreferencesProvider({ children }) {
     const reduceMotion = state.motion.reducedMotion || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     document.documentElement.dataset.reducedMotion = reduceMotion ? 'true' : 'false';
     document.documentElement.dataset.animation = state.motion.enabled && state.background.animationEnabled ? 'enabled' : 'disabled';
-    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* Storage is optional. */ }
-  }, [state]);
+    saveLocalState(activeStorageKey, state);
+  }, [state, activeStorageKey, hydrationVersion]);
+
+  useEffect(() => {
+    if (!remoteReady) return undefined;
+    const timer = window.setTimeout(() => {
+      api('/api/preferences', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preferences: state }) }).catch(() => { /* Local cache remains available offline. */ });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [state, remoteReady]);
   const value = useMemo(() => ({
     state,
     setSetting: (slice, key, value) => dispatch({ type: 'SET_SETTING', slice, key, value }),

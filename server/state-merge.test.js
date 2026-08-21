@@ -31,6 +31,13 @@ test('mergeState fills personality only when missing', () => {
   assert.equal(merged.personality.version, 7);
 });
 
+test('mergeState imports workspace preferences only when missing', () => {
+  const imported = mergeState({ sessions: [], workspacePreferences: null }, { workspacePreferences: { theme: { themeId: 'ink' } } });
+  assert.equal(imported.workspacePreferences.theme.themeId, 'ink');
+  const existing = mergeState({ sessions: [], workspacePreferences: { theme: { themeId: 'sakura' } } }, { workspacePreferences: { theme: { themeId: 'ink' } } });
+  assert.equal(existing.workspacePreferences.theme.themeId, 'sakura');
+});
+
 test('mergeState rejects invalid payloads', () => {
   assert.throws(() => mergeState({}, null), /Invalid import state/);
   assert.throws(() => mergeState(null, {}), /Invalid base state/);

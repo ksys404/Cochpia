@@ -28,6 +28,7 @@ import { maybeCompactConversation } from './compaction.js';
 import { mergeState } from './state-merge.js';
 import { analyzeMessage, shouldRemember } from './auto-memory.js';
 import { ensurePsychologyTraits, listAtmospherePresets, resolveAtmosphere } from './psychology.js';
+import { sanitizeWorkspacePreferences } from './workspace-preferences.js';
 
 const app = express();
 const observability = createObservability({ rateLimitMax: Number(process.env.API_RATE_LIMIT_MAX || 120) });
@@ -382,7 +383,8 @@ app.get('/api/export', (req, res) => {
       personalityHistory: state.personalityHistory,
       personalityAudit: state.personalityAudit,
       agents: state.agents,
-      profile: state.profile
+      profile: state.profile,
+      workspacePreferences: state.workspacePreferences || null
     }
   });
 });
@@ -396,6 +398,18 @@ app.post('/api/import', async (req, res) => {
     res.json({ ok: true, importedAt: new Date().toISOString() });
   } catch (error) {
     fail(res, 400, 'IMPORT_FAILED', error.message);
+  }
+});
+app.get('/api/preferences', (_, res) => res.json({ preferences: state.workspacePreferences || null, updatedAt: state.workspacePreferencesUpdatedAt || null }));
+app.patch('/api/preferences', async (req, res) => {
+  try {
+    const preferences = sanitizeWorkspacePreferences(req.body?.preferences);
+    state.workspacePreferences = preferences;
+    state.workspacePreferencesUpdatedAt = new Date().toISOString();
+    await saveState(state);
+    return res.json({ preferences, updatedAt: state.workspacePreferencesUpdatedAt });
+  } catch (error) {
+    return fail(res, 400, 'INVALID_PREFERENCES', error.message);
   }
 });
 app.post('/api/memories/batch', async (req, res) => {
@@ -474,6 +488,22 @@ app.patch('/api/profile', async (req, res) => {
       if (avatarImage && !avatarImage.startsWith('data:image/')) return fail(res, 400, 'INVALID_AVATAR_IMAGE', 'Avatar image must be a data URL');
       if (avatarImage.length > 400000) return fail(res, 400, 'AVATAR_IMAGE_TOO_LARGE', 'Avatar image is too large');
       state.profile.avatarImage = avatarImage || null;
+    }
+    if (input.characterSheet !== undefined) {
+      const characterSheet = String(input.characterSheet || '');
+      if (characterSheet && !characterSheet.startsWith('data:image/')) return fail(res, 400, 'INVALID_CHARACTER_SHEET', 'Character sheet must be a data URL');
+      if (characterSheet.length > 2000000) return fail(res, 400, 'CHARACTER_SHEET_TOO_LARGE', 'Character sheet is too large');
+      state.profile.characterSheet = characterSheet || null;
+    }
+    if (input.characterAnimation !== undefined) {
+      if (input.characterAnimation === null) state.profile.characterAnimation = null;
+      else {
+        const animation = input.characterAnimation;
+        if (typeof animation !== 'object' || !Number.isFinite(Number(animation.frameWidth)) || !Number.isFinite(Number(animation.frameHeight))) {
+          return fail(res, 400, 'INVALID_CHARACTER_ANIMATION', 'Character animation is invalid');
+        }
+        state.profile.characterAnimation = animation;
+      }
     }
     state.profile.updatedAt = new Date().toISOString();
     await saveState(state);

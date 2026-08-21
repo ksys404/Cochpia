@@ -36,5 +36,6 @@ export function mergeState(base, incoming) {
 
   if (!merged.personality && incoming.personality) merged.personality = incoming.personality;
   if (!merged.profile && incoming.profile) merged.profile = incoming.profile;
+  if (!merged.workspacePreferences && incoming.workspacePreferences) merged.workspacePreferences = incoming.workspacePreferences;
   return merged;
 }

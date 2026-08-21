@@ -1,6 +1,6 @@
 # Cochpia 开发进度与 GitHub 发布前审计
 
-更新时间：2026-08-21
+更新时间：2026-08-22
 
 ## 当前开发进度
 
@@ -12,6 +12,7 @@
 - 首屏品牌标题已改为英文花体字体栈，并增加背景遮罩保证可读性。
 - 聊天区和输入区支持统一圆角变量，输入区与输出区有明确间距。
 - 音乐、设置、日历、任务和页面导航支持再次点击关闭或返回聊天。
+- 工作区设置已支持按 Supabase 用户保存到服务端；未登录或离线时使用浏览器本地缓存，首次登录会兼容迁移旧设置。
 - 共生人生 MVP 已落地：地点、行动、需求、时间、事件和本地持久化流程可验收。
 - 已整理 Pipoya、Kenney City Kit Commercial、Kenney Furniture Kit、Kenney Modular Characters 和 RPG Urban Pack 的素材许可记录；正式素材目录保留许可证文件。
 - 视觉预览工作台功能已从应用导航和页面入口移除。
@@ -19,7 +20,7 @@
 ### 当前验证状态
 
 - `npm run build`：通过。
-- `npm test`：`56 pass / 0 fail / 5 skipped`；跳过项需要 `AUTH_MODE=required`、可用 PostgreSQL、隔离 API 或其他外部验收环境，不能视为生产验收完成。
+- `npm test`：`60 pass / 0 fail / 5 skipped`；跳过项需要 `AUTH_MODE=required`、可用 PostgreSQL、隔离 API 或其他外部验收环境，不能视为生产验收完成。
 - 浏览器自动化验收：当前桌面浏览器连接不可用，首屏视频、移动端点击和视觉层级仍需人工真实浏览器复核。
 
 ## GitHub 发布前隐私与密钥审计
