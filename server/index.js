@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -21,6 +22,8 @@ import { collectSyncChanges } from './sync-service.js';
 import { createObservability } from './observability.js';
 import { createMusicService } from './music-service.js';
 import { createNeteaseMusicAdapter } from './netease-music-adapter.js';
+import { executeTool, findTool, toOpenAITools } from './tools.js';
+import { createPiClient } from './pi-client.js';
 import { maybeCompactConversation } from './compaction.js';
 import { mergeState } from './state-merge.js';
 import { analyzeMessage, shouldRemember } from './auto-memory.js';
@@ -31,6 +34,22 @@ const observability = createObservability({ rateLimitMax: Number(process.env.API
 const port = Number(process.env.PORT || 8787);
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const allowedOrigins = clientOrigin.split(',').map(origin => origin.trim()).filter(Boolean);
+const isPrivateDevelopmentOrigin = origin => {
+  if (process.env.NODE_ENV === 'production') return false;
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== 'http:' || url.port !== '5173') return false;
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    const octets = hostname.split('.').map(Number);
+    if (octets.length !== 4 || octets.some(octet => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false;
+    return octets[0] === 10
+      || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+      || (octets[0] === 192 && octets[1] === 168);
+  } catch {
+    return false;
+  }
+};
 const requestContext = new AsyncLocalStorage();
 let baseState;
 try {
@@ -70,6 +89,9 @@ const events = createEventService(state, () => saveState(state));
 const agents = createAgentService(state, () => saveState(state));
 const activeRuns = new Map();
 const streamRuns = new Map();
+// 待确认的写操作：key = `${runId}:${toolCallId}` → resolve({ approved })
+const pendingApprovals = new Map();
+const waitForApproval = (runId, toolCallId) => new Promise(resolve => { pendingApprovals.set(`${runId}:${toolCallId}`, resolve); });
 const streamRetentionMs = Math.max(30_000, Number(process.env.SSE_RUN_RETENTION_MS || 300_000));
 const model = createModelProvider();
 const music = createMusicService({ adapter: process.env.MUSIC_MODE === 'netease' ? createNeteaseMusicAdapter() : undefined });
@@ -86,12 +108,14 @@ state.personalityAudit ||= [];
 state.tasks ||= [];
 state.events ||= [];
 state.agents ||= [];
+state.profile ||= { name: 'Cochpia', gender: 'none', age: null, avatar: '✦' };
+state.mode ||= 'companion';
 ensurePsychologyTraits(state.personality);
 
 app.use((req, res, next) => {
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || allowedOrigins.includes(origin) || isPrivateDevelopmentOrigin(origin)) return callback(null, true);
       if (origin === `http://${req.headers.host}` || origin === `https://${req.headers.host}`) return callback(null, true);
       return callback(Object.assign(new Error('CORS origin is not allowed'), { code: 'CORS_ORIGIN_NOT_ALLOWED' }));
     }
@@ -357,7 +381,8 @@ app.get('/api/export', (req, res) => {
       tasks: state.tasks,
       personalityHistory: state.personalityHistory,
       personalityAudit: state.personalityAudit,
-      agents: state.agents
+      agents: state.agents,
+      profile: state.profile
     }
   });
 });
@@ -396,7 +421,7 @@ app.post('/api/models/:provider/test', async (req, res) => {
     await selected.generate({ message: 'Connection test. Reply with OK.', recalled: [] });
     res.json({ ok: true, provider: selected.provider, model: selected.model, protocol: selected.protocol, latencyMs: Date.now() - startedAt });
   } catch (error) {
-    fail(res, error.code === 'MODEL_AUTH_FAILED' ? 401 : error.code === 'MODEL_NOT_FOUND' ? 404 : error.code === 'MODEL_TIMEOUT' ? 504 : 502, error.code || 'MODEL_CONNECTION_FAILED', error.message);
+    fail(res, error.code === 'MODEL_AUTH_FAILED' ? 401 : error.code === 'MODEL_INSUFFICIENT_BALANCE' ? 402 : error.code === 'MODEL_NOT_FOUND' ? 404 : error.code === 'MODEL_TIMEOUT' ? 504 : 502, error.code || 'MODEL_CONNECTION_FAILED', error.message);
   }
 });
 app.post('/api/chat/cancel', (req, res) => {
@@ -421,6 +446,73 @@ app.get('/api/chat/stream/:runId', (req, res) => {
   if (run.finished) res.end();
 });
 app.get('/api/memory/dream', async (req, res) => res.json({ memories: await memory.dream(req.query.limit), generatedAt: new Date().toISOString() }));
+app.get('/api/profile', (_, res) => res.json(state.profile));
+app.patch('/api/profile', async (req, res) => {
+  try {
+    const input = req.body || {};
+    if (input.name !== undefined) {
+      const name = String(input.name).trim().slice(0, 20);
+      if (!name) return fail(res, 400, 'INVALID_NAME', 'Name is required');
+      state.profile.name = name;
+    }
+    if (input.gender !== undefined) {
+      const gender = String(input.gender);
+      if (!['none', 'male', 'female', 'other'].includes(gender)) return fail(res, 400, 'INVALID_GENDER', 'Invalid gender');
+      state.profile.gender = gender;
+    }
+    if (input.age !== undefined) {
+      if (input.age === null) state.profile.age = null;
+      else {
+        const age = Number(input.age);
+        if (!Number.isFinite(age) || age < 0 || age > 90) return fail(res, 400, 'INVALID_AGE', 'Age must be between 0 and 90');
+        state.profile.age = age;
+      }
+    }
+    if (input.avatar !== undefined) state.profile.avatar = String(input.avatar).slice(0, 8) || '✦';
+    if (input.avatarImage !== undefined) {
+      const avatarImage = String(input.avatarImage || '');
+      if (avatarImage && !avatarImage.startsWith('data:image/')) return fail(res, 400, 'INVALID_AVATAR_IMAGE', 'Avatar image must be a data URL');
+      if (avatarImage.length > 400000) return fail(res, 400, 'AVATAR_IMAGE_TOO_LARGE', 'Avatar image is too large');
+      state.profile.avatarImage = avatarImage || null;
+    }
+    state.profile.updatedAt = new Date().toISOString();
+    await saveState(state);
+    return res.json(state.profile);
+  } catch (error) { return fail(res, 400, 'INVALID_PROFILE', error.message); }
+});
+app.get('/api/mode', (_, res) => res.json({ mode: state.mode }));
+app.patch('/api/mode', async (req, res) => {
+  const mode = String(req.body?.mode || '');
+  if (!['companion', 'work'].includes(mode)) return fail(res, 400, 'INVALID_MODE', 'Mode must be companion or work');
+  state.mode = mode;
+  await saveState(state);
+  res.json({ mode: state.mode });
+});
+app.post('/api/chat/approve', (req, res) => {
+  const { runId, toolCallId, approved } = req.body || {};
+  const key = `${runId}:${toolCallId}`;
+  const resolve = pendingApprovals.get(key);
+  if (!resolve) return fail(res, 404, 'NO_PENDING_APPROVAL', 'No pending approval');
+  pendingApprovals.delete(key);
+  resolve({ approved: approved === true });
+  res.json({ ok: true });
+});
+// 文件上传：手机/网页上传文件到服务端，供工作模式 read 工具处理
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { name, dataUrl } = req.body || {};
+    const fileName = String(name || 'file').replace(/[^\w.\-\u4e00-\u9fff]/g, '_').slice(0, 100) || 'file';
+    if (!dataUrl || typeof dataUrl !== 'string') return fail(res, 400, 'INVALID_UPLOAD', 'dataUrl is required');
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return fail(res, 400, 'INVALID_UPLOAD', 'Invalid data URL');
+    const buffer = Buffer.from(match[2], 'base64');
+    if (buffer.length > 5 * 1024 * 1024) return fail(res, 400, 'FILE_TOO_LARGE', '文件过大（最大 5MB）');
+    const uploadDir = path.join(process.cwd(), 'uploads');
+    fs.mkdirSync(uploadDir, { recursive: true });
+    fs.writeFileSync(path.join(uploadDir, fileName), buffer);
+    return res.json({ name: fileName, path: `uploads/${fileName}`, size: buffer.length });
+  } catch (error) { return fail(res, 400, 'UPLOAD_FAILED', error.message); }
+});
 app.get('/api/personality', (_, res) => res.json({ ...state.personality, evidenceCount: state.evidence.length }));
 app.get('/api/personality/history', (_, res) => res.json(state.personalityHistory.map(version => ({
   version: version.version,
@@ -496,6 +588,39 @@ app.post('/api/personality/rollback', async (req, res) => {
   await saveState(state); res.json({ ...state.personality, audit: state.personalityAudit[0] });
 });
 
+const detectModeSwitch = text => {
+  const t = String(text || '').trim();
+  const wantsWork = /(切换到|进入|开启|切到|回到|切换).{0,4}工作模式/.test(t) || t === '工作模式';
+  const wantsCompanion = /(切换到|进入|开启|切到|回到|切换).{0,4}陪伴模式/.test(t) || t === '陪伴模式';
+  if (wantsWork) return 'work';
+  if (wantsCompanion) return 'companion';
+  return null;
+};
+
+// 用 Pi RPC 执行工作模式任务：spawn `pi --mode rpc`，把事件流映射为 Cochpia 的 SSE 事件
+async function runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId }) {
+  const pi = createPiClient({ cwd: process.cwd() });
+  let fullText = '';
+  await pi.prompt(userMessage.content, event => {
+    if (run.cancelled) return;
+    if (event.type === 'message_update') {
+      const e = event.assistantMessageEvent;
+      if (e?.type === 'text_delta') { fullText += e.delta; send(res, 'text', { delta: e.delta }, run); }
+    } else if (event.type === 'tool_execution_start') {
+      send(res, 'tool', { runId: run.id, name: event.toolName, args: event.args }, run);
+    } else if (event.type === 'tool_execution_end') {
+      const text = (event.result?.content || []).filter(c => c.type === 'text').map(c => c.text).join('') || '';
+      send(res, 'tool_result', { runId: run.id, name: event.toolName, result: text.slice(0, 4000) }, run);
+    }
+  });
+  assistantMessage.content = fullText || '（Pi 未返回内容）';
+  state.messages[sessionId].push(assistantMessage);
+  touchSession(getSession(sessionId));
+  await saveState(state);
+  send(res, 'done', { runId: run.id, messageId: assistantMessage.id, engine: 'pi', mode: state.mode }, run);
+  return true;
+}
+
 async function handleChatStream(req, res, { regenerateMessageId = null, retry = false } = {}) {
   const { sessionId, message, provider, model: requestedModel, channel } = req.body || {};
   const activeChannel = String(channel || '默认').slice(0, 60);
@@ -556,11 +681,88 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
   } catch (error) {
     console.error(JSON.stringify({ event: 'compaction_failed', code: error.code || 'COMPACTION_FAILED' }));
   }
+  // 语言切换工作/陪伴模式
+  const switchTo = detectModeSwitch(userMessage.content);
+  if (switchTo && switchTo !== state.mode) {
+    state.mode = switchTo;
+    await saveState(state);
+    assistantMessage.content = switchTo === 'work'
+      ? '已切换到「工作模式」。现在我会以任务为导向，帮你执行具体任务。需要切回时，说「切换到陪伴模式」即可。'
+      : '已切回「陪伴模式」。我会继续像平常一样陪着你。需要工作时，说「切换到工作模式」即可。';
+    state.messages[sessionId].push(assistantMessage); touchSession(getSession(sessionId));
+    send(res, 'text', { delta: assistantMessage.content }, run);
+    send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: state.mode, provider: selectedModel.provider, model: selectedModel.model }, run);
+    finishRun(run); if (run.response) run.response.end();
+    return;
+  }
+  // 工作模式：优先 Pi RPC（强引擎），失败回退本地工具
+  if (state.mode === 'work') {
+    try {
+      if (await runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId })) {
+        finishRun(run); if (run.response) run.response.end(); return;
+      }
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'pi_rpc_unavailable', error: error.code || error.message }));
+    }
+    try {
+      // 工作模式可用独立模型（WORK_MODEL_PROVIDER / WORK_MODEL_NAME），未配置则用会话模型
+      const workProviderName = process.env.WORK_MODEL_PROVIDER || requestedProvider;
+      const workModelName = process.env.WORK_MODEL_NAME || selection.config.model;
+      const workModel = (workProviderName === requestedProvider && workModelName === selection.config.model)
+        ? selectedModel
+        : createModelProvider(workProviderName, { model: workModelName });
+      const rt = buildRuntimeContext({ messages: [], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: state.mode });
+      const system = workModel.composeSystemPrompt({ recalled, runtimeContext: rt });
+      const history = state.messages[sessionId].slice(0, -1).slice(-10).map(m => ({ role: m.role, content: m.content }));
+      const conversation = [...history, { role: 'user', content: userMessage.content }];
+      let finalContent = '';
+      for (let step = 0; step < 8; step += 1) {
+        if (run.cancelled) { restoreRegeneration(); finishRun(run); return; }
+        const result = await workModel.generateWithTools({ system, messages: conversation, tools: toOpenAITools(), signal: run.controller.signal });
+        if (!result.toolCalls.length) { finalContent = result.content; break; }
+        conversation.push({ role: 'assistant', content: result.content || '', tool_calls: result.toolCalls });
+        for (const tc of result.toolCalls) {
+          const name = tc.function?.name || '';
+          let args = {};
+          try { args = JSON.parse(tc.function?.arguments || '{}'); } catch { args = {}; }
+          const tool = findTool(name);
+          send(res, 'tool', { runId: run.id, name, args }, run);
+          let toolResult;
+          if (tool?.requiresApproval) {
+            send(res, 'tool_pending', { runId: run.id, toolCallId: tc.id, name, args }, run);
+            const approval = await waitForApproval(run.id, tc.id);
+            if (!approval.approved) {
+              toolResult = '用户拒绝了这次修改';
+              send(res, 'tool_result', { runId: run.id, name, result: toolResult }, run);
+              conversation.push({ role: 'tool', tool_call_id: tc.id, content: toolResult });
+              continue;
+            }
+            toolResult = await executeTool(name, args);
+          } else {
+            toolResult = await executeTool(name, args);
+          }
+          send(res, 'tool_result', { runId: run.id, name, result: String(toolResult).slice(0, 4000) }, run);
+          conversation.push({ role: 'tool', tool_call_id: tc.id, content: String(toolResult).slice(0, 8000) });
+        }
+      }
+      assistantMessage.content = finalContent || '（工具调用未产生最终回复，请换个问法）';
+      state.messages[sessionId].push(assistantMessage); touchSession(getSession(sessionId));
+      send(res, 'text', { delta: assistantMessage.content }, run);
+      send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: state.mode, provider: selectedModel.provider, model: selectedModel.model }, run);
+      finishRun(run); if (run.response) run.response.end();
+    } catch (error) {
+      send(res, 'error', { code: error.code || 'WORK_MODE_FAILED', message: error.message }, run);
+      send(res, 'done', { ok: false, messageId: assistantMessage.id, runId: run.id }, run);
+      restoreRegeneration(); finishRun(run);
+      if (run.response) run.response.end();
+    }
+    return;
+  }
   try {
     for await (const delta of selectedModel.stream({
       message: userMessage.content,
       recalled,
-      runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone }),
+      runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: state.mode }),
       signal: run.controller.signal
     })) {
       if (run.cancelled) { restoreRegeneration(); finishRun(run); return; }
@@ -614,11 +816,19 @@ app.post('/api/chat/group', async (req, res) => {
     if (!agent) continue;
     let content;
     try {
-      const provider = agent.provider || session.modelProvider || 'mock';
-      const modelName = agent.model || session.modelName || 'mock';
+      const provider = agent.provider || session.modelProvider || process.env.MODEL_PROVIDER || 'mock';
+      const modelName = agent.model || session.modelName || '';
       const selection = resolveModelSelection(provider, modelName);
-      const model = selection.ok ? createModelProvider(provider, { model: selection.config.model }) : createModelProvider('mock');
-      content = await model.generate({ message: String(message), recalled: [], runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, persona: agent.persona || session.persona, upcomingEvents: events.listUpcoming(7) }) });
+      let model;
+      if (selection.ok) {
+        model = createModelProvider(provider, { model: selection.config.model });
+      } else {
+        // Agent 模型无效时回退到会话/默认模型（避免落到 mock）
+        const fallbackProvider = session.modelProvider || process.env.MODEL_PROVIDER || 'mock';
+        const fallbackSelection = resolveModelSelection(fallbackProvider, session.modelName || '');
+        model = fallbackSelection.ok ? createModelProvider(fallbackProvider, { model: fallbackSelection.config.model }) : createModelProvider('mock');
+      }
+      content = await model.generate({ message: String(message), recalled: [], runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, persona: agent.persona || session.persona, upcomingEvents: events.listUpcoming(7), profile: { ...state.profile, name: agent.name } }) });
     } catch (error) { content = `（${agent.name} 暂时无法回应）`; }
     const reply = { id: randomUUID(), role: 'assistant', content: String(content || '').trim(), createdAt: new Date().toISOString(), channel: activeChannel, senderId: agent.id, senderName: agent.name, senderAvatar: agent.avatar };
     state.messages[sessionId].push(reply);

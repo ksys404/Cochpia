@@ -64,18 +64,20 @@ test('protocol adapters parse OpenAI-compatible, Anthropic, and Gemini responses
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
 
-test('protocol adapters preserve authentication and model-not-found error codes', async () => {
+test('protocol adapters preserve authentication, balance, and model-not-found error codes', async () => {
   const server = createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json');
-    response.statusCode = request.url === '/auth' ? 401 : 404;
-    response.end(JSON.stringify({ error: { message: request.url === '/auth' ? 'bad key' : 'missing model' } }));
+    response.statusCode = request.url === '/auth' ? 401 : request.url === '/balance' ? 402 : 404;
+    response.end(JSON.stringify({ error: { message: request.url === '/auth' ? 'bad key' : request.url === '/balance' ? 'Insufficient Balance' : 'missing model' } }));
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const port = server.address().port;
   try {
     const auth = createModelProvider('openai', { apiURL: `http://127.0.0.1:${port}/auth`, apiKey: 'fixture', model: 'fixture' });
+    const balance = createModelProvider('openai', { apiURL: `http://127.0.0.1:${port}/balance`, apiKey: 'fixture', model: 'fixture' });
     const missing = createModelProvider('openai', { apiURL: `http://127.0.0.1:${port}/missing`, apiKey: 'fixture', model: 'fixture' });
     await assert.rejects(auth.generate({ message: 'x', recalled: [] }), error => error.code === 'MODEL_AUTH_FAILED');
+    await assert.rejects(balance.generate({ message: 'x', recalled: [] }), error => error.code === 'MODEL_INSUFFICIENT_BALANCE' && error.status === 402);
     await assert.rejects(missing.generate({ message: 'x', recalled: [] }), error => error.code === 'MODEL_NOT_FOUND');
   } finally { await new Promise(resolve => server.close(resolve)); }
 });

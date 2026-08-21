@@ -1,0 +1,5100 @@
+{
+ "bodyTypes": [
+  {
+   "slug": "child",
+   "name": "儿童",
+   "categories": {
+    "clothes": {
+     "name": "服装",
+     "order": 6,
+     "parts": [
+      {
+       "file": "clothes-001.png",
+       "path": "/pipoya/child/clothes/clothes-001.png",
+       "label": "女_服001",
+       "original": "女_服001.png"
+      },
+      {
+       "file": "clothes-002.png",
+       "path": "/pipoya/child/clothes/clothes-002.png",
+       "label": "女_服002",
+       "original": "女_服002.png"
+      },
+      {
+       "file": "clothes-003.png",
+       "path": "/pipoya/child/clothes/clothes-003.png",
+       "label": "男_服001",
+       "original": "男_服001.png"
+      },
+      {
+       "file": "clothes-004.png",
+       "path": "/pipoya/child/clothes/clothes-004.png",
+       "label": "男_服002",
+       "original": "男_服002.png"
+      }
+     ]
+    },
+    "skin": {
+     "name": "皮肤",
+     "order": 2,
+     "parts": [
+      {
+       "file": "skin-001.png",
+       "path": "/pipoya/child/skin/skin-001.png",
+       "label": "子供_ベース001-01",
+       "original": "子供_ベース001-01.png"
+      },
+      {
+       "file": "skin-002.png",
+       "path": "/pipoya/child/skin/skin-002.png",
+       "label": "子供_ベース001-02",
+       "original": "子供_ベース001-02.png"
+      },
+      {
+       "file": "skin-003.png",
+       "path": "/pipoya/child/skin/skin-003.png",
+       "label": "子供_ベース001-03",
+       "original": "子供_ベース001-03.png"
+      },
+      {
+       "file": "skin-004.png",
+       "path": "/pipoya/child/skin/skin-004.png",
+       "label": "子供_ベース001-04",
+       "original": "子供_ベース001-04.png"
+      },
+      {
+       "file": "skin-005.png",
+       "path": "/pipoya/child/skin/skin-005.png",
+       "label": "子供_ベース001-05",
+       "original": "子供_ベース001-05.png"
+      },
+      {
+       "file": "skin-006.png",
+       "path": "/pipoya/child/skin/skin-006.png",
+       "label": "子供_ベース001-マネキン",
+       "original": "子供_ベース001-マネキン.png"
+      },
+      {
+       "file": "skin-007.png",
+       "path": "/pipoya/child/skin/skin-007.png",
+       "label": "子供_ベース001_髪影なし-01",
+       "original": "子供_ベース001_髪影なし-01.png"
+      },
+      {
+       "file": "skin-008.png",
+       "path": "/pipoya/child/skin/skin-008.png",
+       "label": "子供_ベース001_髪影なし-02",
+       "original": "子供_ベース001_髪影なし-02.png"
+      },
+      {
+       "file": "skin-009.png",
+       "path": "/pipoya/child/skin/skin-009.png",
+       "label": "子供_ベース001_髪影なし-03",
+       "original": "子供_ベース001_髪影なし-03.png"
+      },
+      {
+       "file": "skin-010.png",
+       "path": "/pipoya/child/skin/skin-010.png",
+       "label": "子供_ベース001_髪影なし-04",
+       "original": "子供_ベース001_髪影なし-04.png"
+      },
+      {
+       "file": "skin-011.png",
+       "path": "/pipoya/child/skin/skin-011.png",
+       "label": "子供_ベース001_髪影なし-05",
+       "original": "子供_ベース001_髪影なし-05.png"
+      },
+      {
+       "file": "skin-012.png",
+       "path": "/pipoya/child/skin/skin-012.png",
+       "label": "子供_ベース001_髪影なし-マネキン",
+       "original": "子供_ベース001_髪影なし-マネキン.png"
+      },
+      {
+       "file": "skin-013.png",
+       "path": "/pipoya/child/skin/skin-013.png",
+       "label": "骸骨子供_ベース001-01",
+       "original": "骸骨子供_ベース001-01.png"
+      },
+      {
+       "file": "skin-014.png",
+       "path": "/pipoya/child/skin/skin-014.png",
+       "label": "骸骨子供_ベース001-02",
+       "original": "骸骨子供_ベース001-02.png"
+      },
+      {
+       "file": "skin-015.png",
+       "path": "/pipoya/child/skin/skin-015.png",
+       "label": "骸骨子供_ベース001-03",
+       "original": "骸骨子供_ベース001-03.png"
+      },
+      {
+       "file": "skin-016.png",
+       "path": "/pipoya/child/skin/skin-016.png",
+       "label": "骸骨子供_ベース001-04",
+       "original": "骸骨子供_ベース001-04.png"
+      },
+      {
+       "file": "skin-017.png",
+       "path": "/pipoya/child/skin/skin-017.png",
+       "label": "骸骨子供_ベース001-05",
+       "original": "骸骨子供_ベース001-05.png"
+      }
+     ]
+    },
+    "eyes": {
+     "name": "眼睛",
+     "order": 4,
+     "parts": [
+      {
+       "file": "eyes-001.png",
+       "path": "/pipoya/child/eyes/eyes-001.png",
+       "label": "共有_目001",
+       "original": "共有_目001.png"
+      },
+      {
+       "file": "eyes-002.png",
+       "path": "/pipoya/child/eyes/eyes-002.png",
+       "label": "共有_目002",
+       "original": "共有_目002.png"
+      },
+      {
+       "file": "eyes-003.png",
+       "path": "/pipoya/child/eyes/eyes-003.png",
+       "label": "共有_目003",
+       "original": "共有_目003.png"
+      },
+      {
+       "file": "eyes-004.png",
+       "path": "/pipoya/child/eyes/eyes-004.png",
+       "label": "共有_目004",
+       "original": "共有_目004.png"
+      },
+      {
+       "file": "eyes-005.png",
+       "path": "/pipoya/child/eyes/eyes-005.png",
+       "label": "共有_目005",
+       "original": "共有_目005.png"
+      },
+      {
+       "file": "eyes-006.png",
+       "path": "/pipoya/child/eyes/eyes-006.png",
+       "label": "共有_目006",
+       "original": "共有_目006.png"
+      },
+      {
+       "file": "eyes-007.png",
+       "path": "/pipoya/child/eyes/eyes-007.png",
+       "label": "共有_目007",
+       "original": "共有_目007.png"
+      },
+      {
+       "file": "eyes-008.png",
+       "path": "/pipoya/child/eyes/eyes-008.png",
+       "label": "共有_目008",
+       "original": "共有_目008.png"
+      },
+      {
+       "file": "eyes-009.png",
+       "path": "/pipoya/child/eyes/eyes-009.png",
+       "label": "共有_目009",
+       "original": "共有_目009.png"
+      },
+      {
+       "file": "eyes-010.png",
+       "path": "/pipoya/child/eyes/eyes-010.png",
+       "label": "共有_目010",
+       "original": "共有_目010.png"
+      },
+      {
+       "file": "eyes-011.png",
+       "path": "/pipoya/child/eyes/eyes-011.png",
+       "label": "女_目001",
+       "original": "女_目001.png"
+      },
+      {
+       "file": "eyes-012.png",
+       "path": "/pipoya/child/eyes/eyes-012.png",
+       "label": "女_目002",
+       "original": "女_目002.png"
+      },
+      {
+       "file": "eyes-013.png",
+       "path": "/pipoya/child/eyes/eyes-013.png",
+       "label": "女_目003",
+       "original": "女_目003.png"
+      },
+      {
+       "file": "eyes-014.png",
+       "path": "/pipoya/child/eyes/eyes-014.png",
+       "label": "女_目004",
+       "original": "女_目004.png"
+      },
+      {
+       "file": "eyes-015.png",
+       "path": "/pipoya/child/eyes/eyes-015.png",
+       "label": "女_目005",
+       "original": "女_目005.png"
+      },
+      {
+       "file": "eyes-016.png",
+       "path": "/pipoya/child/eyes/eyes-016.png",
+       "label": "女_目006",
+       "original": "女_目006.png"
+      },
+      {
+       "file": "eyes-017.png",
+       "path": "/pipoya/child/eyes/eyes-017.png",
+       "label": "女_目007",
+       "original": "女_目007.png"
+      },
+      {
+       "file": "eyes-018.png",
+       "path": "/pipoya/child/eyes/eyes-018.png",
+       "label": "女_目008",
+       "original": "女_目008.png"
+      },
+      {
+       "file": "eyes-019.png",
+       "path": "/pipoya/child/eyes/eyes-019.png",
+       "label": "女_目009",
+       "original": "女_目009.png"
+      },
+      {
+       "file": "eyes-020.png",
+       "path": "/pipoya/child/eyes/eyes-020.png",
+       "label": "女_目010",
+       "original": "女_目010.png"
+      },
+      {
+       "file": "eyes-021.png",
+       "path": "/pipoya/child/eyes/eyes-021.png",
+       "label": "男_目001",
+       "original": "男_目001.png"
+      },
+      {
+       "file": "eyes-022.png",
+       "path": "/pipoya/child/eyes/eyes-022.png",
+       "label": "男_目002",
+       "original": "男_目002.png"
+      },
+      {
+       "file": "eyes-023.png",
+       "path": "/pipoya/child/eyes/eyes-023.png",
+       "label": "男_目003",
+       "original": "男_目003.png"
+      },
+      {
+       "file": "eyes-024.png",
+       "path": "/pipoya/child/eyes/eyes-024.png",
+       "label": "男_目004",
+       "original": "男_目004.png"
+      },
+      {
+       "file": "eyes-025.png",
+       "path": "/pipoya/child/eyes/eyes-025.png",
+       "label": "男_目005",
+       "original": "男_目005.png"
+      },
+      {
+       "file": "eyes-026.png",
+       "path": "/pipoya/child/eyes/eyes-026.png",
+       "label": "男_目006",
+       "original": "男_目006.png"
+      },
+      {
+       "file": "eyes-027.png",
+       "path": "/pipoya/child/eyes/eyes-027.png",
+       "label": "男_目007",
+       "original": "男_目007.png"
+      },
+      {
+       "file": "eyes-028.png",
+       "path": "/pipoya/child/eyes/eyes-028.png",
+       "label": "男_目008",
+       "original": "男_目008.png"
+      },
+      {
+       "file": "eyes-029.png",
+       "path": "/pipoya/child/eyes/eyes-029.png",
+       "label": "男_目009",
+       "original": "男_目009.png"
+      },
+      {
+       "file": "eyes-030.png",
+       "path": "/pipoya/child/eyes/eyes-030.png",
+       "label": "男_目010",
+       "original": "男_目010.png"
+      }
+     ]
+    },
+    "hair": {
+     "name": "发型",
+     "order": 11,
+     "parts": [
+      {
+       "file": "hair-001.png",
+       "path": "/pipoya/child/hair/hair-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-002.png",
+       "path": "/pipoya/child/hair/hair-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-003.png",
+       "path": "/pipoya/child/hair/hair-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-004.png",
+       "path": "/pipoya/child/hair/hair-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-005.png",
+       "path": "/pipoya/child/hair/hair-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-006.png",
+       "path": "/pipoya/child/hair/hair-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-007.png",
+       "path": "/pipoya/child/hair/hair-007.png",
+       "label": "女_髪004-01",
+       "original": "女_髪004-01.png"
+      },
+      {
+       "file": "hair-008.png",
+       "path": "/pipoya/child/hair/hair-008.png",
+       "label": "女_髪004-02",
+       "original": "女_髪004-02.png"
+      },
+      {
+       "file": "hair-009.png",
+       "path": "/pipoya/child/hair/hair-009.png",
+       "label": "女_髪005-01",
+       "original": "女_髪005-01.png"
+      },
+      {
+       "file": "hair-010.png",
+       "path": "/pipoya/child/hair/hair-010.png",
+       "label": "女_髪005-02",
+       "original": "女_髪005-02.png"
+      },
+      {
+       "file": "hair-011.png",
+       "path": "/pipoya/child/hair/hair-011.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-012.png",
+       "path": "/pipoya/child/hair/hair-012.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-013.png",
+       "path": "/pipoya/child/hair/hair-013.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-014.png",
+       "path": "/pipoya/child/hair/hair-014.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-015.png",
+       "path": "/pipoya/child/hair/hair-015.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-016.png",
+       "path": "/pipoya/child/hair/hair-016.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      },
+      {
+       "file": "hair-017.png",
+       "path": "/pipoya/child/hair/hair-017.png",
+       "label": "男_髪004-01",
+       "original": "男_髪004-01.png"
+      },
+      {
+       "file": "hair-018.png",
+       "path": "/pipoya/child/hair/hair-018.png",
+       "label": "男_髪004-02",
+       "original": "男_髪004-02.png"
+      },
+      {
+       "file": "hair-019.png",
+       "path": "/pipoya/child/hair/hair-019.png",
+       "label": "男_髪005-01",
+       "original": "男_髪005-01.png"
+      },
+      {
+       "file": "hair-020.png",
+       "path": "/pipoya/child/hair/hair-020.png",
+       "label": "男_髪005-02",
+       "original": "男_髪005-02.png"
+      }
+     ]
+    },
+    "hair-hat": {
+     "name": "发型(帽用)",
+     "order": 12,
+     "parts": [
+      {
+       "file": "hair-hat-001.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-002.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-003.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-004.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-005.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-006.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-hat-007.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-007.png",
+       "label": "女_髪004-01",
+       "original": "女_髪004-01.png"
+      },
+      {
+       "file": "hair-hat-008.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-008.png",
+       "label": "女_髪004-02",
+       "original": "女_髪004-02.png"
+      },
+      {
+       "file": "hair-hat-009.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-009.png",
+       "label": "女_髪005-01",
+       "original": "女_髪005-01.png"
+      },
+      {
+       "file": "hair-hat-010.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-010.png",
+       "label": "女_髪005-02",
+       "original": "女_髪005-02.png"
+      },
+      {
+       "file": "hair-hat-011.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-011.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-012.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-012.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-013.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-013.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-014.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-014.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-015.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-015.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-016.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-016.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      },
+      {
+       "file": "hair-hat-017.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-017.png",
+       "label": "男_髪004-01",
+       "original": "男_髪004-01.png"
+      },
+      {
+       "file": "hair-hat-018.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-018.png",
+       "label": "男_髪004-02",
+       "original": "男_髪004-02.png"
+      },
+      {
+       "file": "hair-hat-019.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-019.png",
+       "label": "男_髪005-01",
+       "original": "男_髪005-01.png"
+      },
+      {
+       "file": "hair-hat-020.png",
+       "path": "/pipoya/child/hair-hat/hair-hat-020.png",
+       "label": "男_髪005-02",
+       "original": "男_髪005-02.png"
+      }
+     ]
+    },
+    "item-effect": {
+     "name": "武器特效",
+     "order": 1,
+     "parts": []
+    },
+    "beard": {
+     "name": "胡须",
+     "order": 8,
+     "parts": []
+    },
+    "cloak": {
+     "name": "披风",
+     "order": 7,
+     "parts": [
+      {
+       "file": "cloak-001.png",
+       "path": "/pipoya/child/cloak/cloak-001.png",
+       "label": "マント001-01",
+       "original": "マント001-01.png"
+      },
+      {
+       "file": "cloak-002.png",
+       "path": "/pipoya/child/cloak/cloak-002.png",
+       "label": "マント001-02",
+       "original": "マント001-02.png"
+      },
+      {
+       "file": "cloak-003.png",
+       "path": "/pipoya/child/cloak/cloak-003.png",
+       "label": "マント001-03",
+       "original": "マント001-03.png"
+      },
+      {
+       "file": "cloak-004.png",
+       "path": "/pipoya/child/cloak/cloak-004.png",
+       "label": "尻尾001_うさ",
+       "original": "尻尾001_うさ.png"
+      },
+      {
+       "file": "cloak-005.png",
+       "path": "/pipoya/child/cloak/cloak-005.png",
+       "label": "尻尾002_猫",
+       "original": "尻尾002_猫.png"
+      },
+      {
+       "file": "cloak-006.png",
+       "path": "/pipoya/child/cloak/cloak-006.png",
+       "label": "尻尾003_犬",
+       "original": "尻尾003_犬.png"
+      },
+      {
+       "file": "cloak-007.png",
+       "path": "/pipoya/child/cloak/cloak-007.png",
+       "label": "尻尾004_くま",
+       "original": "尻尾004_くま.png"
+      }
+     ]
+    },
+    "makeup": {
+     "name": "妆容",
+     "order": 3,
+     "parts": []
+    },
+    "glasses": {
+     "name": "眼镜",
+     "order": 9,
+     "parts": [
+      {
+       "file": "glasses-001.png",
+       "path": "/pipoya/child/glasses/glasses-001.png",
+       "label": "メガネ001-01",
+       "original": "メガネ001-01.png"
+      },
+      {
+       "file": "glasses-002.png",
+       "path": "/pipoya/child/glasses/glasses-002.png",
+       "label": "メガネ001-02",
+       "original": "メガネ001-02.png"
+      },
+      {
+       "file": "glasses-003.png",
+       "path": "/pipoya/child/glasses/glasses-003.png",
+       "label": "メガネ002-01",
+       "original": "メガネ002-01.png"
+      },
+      {
+       "file": "glasses-004.png",
+       "path": "/pipoya/child/glasses/glasses-004.png",
+       "label": "メガネ002-02",
+       "original": "メガネ002-02.png"
+      }
+     ]
+    },
+    "hat": {
+     "name": "帽子",
+     "order": 10,
+     "parts": [
+      {
+       "file": "hat-001.png",
+       "path": "/pipoya/child/hat/hat-001.png",
+       "label": "帽子001_冠",
+       "original": "帽子001_冠.png"
+      },
+      {
+       "file": "hat-002.png",
+       "path": "/pipoya/child/hat/hat-002.png",
+       "label": "帽子002_ティアラ",
+       "original": "帽子002_ティアラ.png"
+      }
+     ]
+    },
+    "shadow": {
+     "name": "阴影",
+     "order": 0,
+     "parts": [
+      {
+       "file": "shadow-001.png",
+       "path": "/pipoya/child/shadow/shadow-001.png",
+       "label": "影1",
+       "original": "影1.png"
+      }
+     ]
+    },
+    "head-extra": {
+     "name": "头部配件",
+     "order": 13,
+     "parts": [
+      {
+       "file": "head-extra-001.png",
+       "path": "/pipoya/child/head-extra/head-extra-001.png",
+       "label": "耳001-01",
+       "original": "耳001-01.png"
+      },
+      {
+       "file": "head-extra-002.png",
+       "path": "/pipoya/child/head-extra/head-extra-002.png",
+       "label": "耳001-02",
+       "original": "耳001-02.png"
+      },
+      {
+       "file": "head-extra-003.png",
+       "path": "/pipoya/child/head-extra/head-extra-003.png",
+       "label": "耳001-03",
+       "original": "耳001-03.png"
+      },
+      {
+       "file": "head-extra-004.png",
+       "path": "/pipoya/child/head-extra/head-extra-004.png",
+       "label": "耳001-04",
+       "original": "耳001-04.png"
+      },
+      {
+       "file": "head-extra-005.png",
+       "path": "/pipoya/child/head-extra/head-extra-005.png",
+       "label": "耳001-05",
+       "original": "耳001-05.png"
+      },
+      {
+       "file": "head-extra-006.png",
+       "path": "/pipoya/child/head-extra/head-extra-006.png",
+       "label": "耳003_うさ耳",
+       "original": "耳003_うさ耳.png"
+      },
+      {
+       "file": "head-extra-007.png",
+       "path": "/pipoya/child/head-extra/head-extra-007.png",
+       "label": "耳004_猫耳",
+       "original": "耳004_猫耳.png"
+      },
+      {
+       "file": "head-extra-008.png",
+       "path": "/pipoya/child/head-extra/head-extra-008.png",
+       "label": "耳005_犬耳",
+       "original": "耳005_犬耳.png"
+      },
+      {
+       "file": "head-extra-009.png",
+       "path": "/pipoya/child/head-extra/head-extra-009.png",
+       "label": "耳006_くま耳",
+       "original": "耳006_くま耳.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "slug": "cat",
+   "name": "猫人",
+   "categories": {
+    "base": {
+     "name": "身体",
+     "order": 2,
+     "parts": [
+      {
+       "file": "base-001.png",
+       "path": "/pipoya/cat/base/base-001.png",
+       "label": "ベース001",
+       "original": "ベース001.png"
+      },
+      {
+       "file": "base-002.png",
+       "path": "/pipoya/cat/base/base-002.png",
+       "label": "ベース002",
+       "original": "ベース002.png"
+      },
+      {
+       "file": "base-003.png",
+       "path": "/pipoya/cat/base/base-003.png",
+       "label": "ベース003",
+       "original": "ベース003.png"
+      },
+      {
+       "file": "base-004.png",
+       "path": "/pipoya/cat/base/base-004.png",
+       "label": "ベース004",
+       "original": "ベース004.png"
+      },
+      {
+       "file": "base-005.png",
+       "path": "/pipoya/cat/base/base-005.png",
+       "label": "ベース005",
+       "original": "ベース005.png"
+      },
+      {
+       "file": "base-006.png",
+       "path": "/pipoya/cat/base/base-006.png",
+       "label": "ベース006",
+       "original": "ベース006.png"
+      },
+      {
+       "file": "base-007.png",
+       "path": "/pipoya/cat/base/base-007.png",
+       "label": "ベース007",
+       "original": "ベース007.png"
+      },
+      {
+       "file": "base-008.png",
+       "path": "/pipoya/cat/base/base-008.png",
+       "label": "ベース008",
+       "original": "ベース008.png"
+      },
+      {
+       "file": "base-009.png",
+       "path": "/pipoya/cat/base/base-009.png",
+       "label": "ベース009",
+       "original": "ベース009.png"
+      },
+      {
+       "file": "base-010.png",
+       "path": "/pipoya/cat/base/base-010.png",
+       "label": "ベース010",
+       "original": "ベース010.png"
+      },
+      {
+       "file": "base-011.png",
+       "path": "/pipoya/cat/base/base-011.png",
+       "label": "ベース011",
+       "original": "ベース011.png"
+      },
+      {
+       "file": "base-012.png",
+       "path": "/pipoya/cat/base/base-012.png",
+       "label": "ベース012",
+       "original": "ベース012.png"
+      },
+      {
+       "file": "base-013.png",
+       "path": "/pipoya/cat/base/base-013.png",
+       "label": "ベース013",
+       "original": "ベース013.png"
+      },
+      {
+       "file": "base-014.png",
+       "path": "/pipoya/cat/base/base-014.png",
+       "label": "ベース014",
+       "original": "ベース014.png"
+      },
+      {
+       "file": "base-015.png",
+       "path": "/pipoya/cat/base/base-015.png",
+       "label": "ベース015",
+       "original": "ベース015.png"
+      },
+      {
+       "file": "base-016.png",
+       "path": "/pipoya/cat/base/base-016.png",
+       "label": "ベース016",
+       "original": "ベース016.png"
+      },
+      {
+       "file": "base-017.png",
+       "path": "/pipoya/cat/base/base-017.png",
+       "label": "ベース017",
+       "original": "ベース017.png"
+      }
+     ]
+    },
+    "clothes": {
+     "name": "服装",
+     "order": 6,
+     "parts": [
+      {
+       "file": "clothes-001.png",
+       "path": "/pipoya/cat/clothes/clothes-001.png",
+       "label": "服001_勇者",
+       "original": "服001_勇者.png"
+      },
+      {
+       "file": "clothes-002.png",
+       "path": "/pipoya/cat/clothes/clothes-002.png",
+       "label": "服002_魔王",
+       "original": "服002_魔王.png"
+      },
+      {
+       "file": "clothes-003.png",
+       "path": "/pipoya/cat/clothes/clothes-003.png",
+       "label": "服003_パンツ-01",
+       "original": "服003_パンツ-01.png"
+      },
+      {
+       "file": "clothes-004.png",
+       "path": "/pipoya/cat/clothes/clothes-004.png",
+       "label": "服003_パンツ-02",
+       "original": "服003_パンツ-02.png"
+      },
+      {
+       "file": "clothes-005.png",
+       "path": "/pipoya/cat/clothes/clothes-005.png",
+       "label": "服003_パンツ-03",
+       "original": "服003_パンツ-03.png"
+      },
+      {
+       "file": "clothes-006.png",
+       "path": "/pipoya/cat/clothes/clothes-006.png",
+       "label": "服004_水着-01",
+       "original": "服004_水着-01.png"
+      },
+      {
+       "file": "clothes-007.png",
+       "path": "/pipoya/cat/clothes/clothes-007.png",
+       "label": "服004_水着-02",
+       "original": "服004_水着-02.png"
+      },
+      {
+       "file": "clothes-008.png",
+       "path": "/pipoya/cat/clothes/clothes-008.png",
+       "label": "服004_水着-03",
+       "original": "服004_水着-03.png"
+      },
+      {
+       "file": "clothes-009.png",
+       "path": "/pipoya/cat/clothes/clothes-009.png",
+       "label": "服004_水着-04",
+       "original": "服004_水着-04.png"
+      }
+     ]
+    },
+    "eyes": {
+     "name": "眼睛",
+     "order": 4,
+     "parts": [
+      {
+       "file": "eyes-001.png",
+       "path": "/pipoya/cat/eyes/eyes-001.png",
+       "label": "目001-01",
+       "original": "目001-01.png"
+      },
+      {
+       "file": "eyes-002.png",
+       "path": "/pipoya/cat/eyes/eyes-002.png",
+       "label": "目001-02",
+       "original": "目001-02.png"
+      },
+      {
+       "file": "eyes-003.png",
+       "path": "/pipoya/cat/eyes/eyes-003.png",
+       "label": "目001-03",
+       "original": "目001-03.png"
+      },
+      {
+       "file": "eyes-004.png",
+       "path": "/pipoya/cat/eyes/eyes-004.png",
+       "label": "目001-04",
+       "original": "目001-04.png"
+      },
+      {
+       "file": "eyes-005.png",
+       "path": "/pipoya/cat/eyes/eyes-005.png",
+       "label": "目001-05",
+       "original": "目001-05.png"
+      },
+      {
+       "file": "eyes-006.png",
+       "path": "/pipoya/cat/eyes/eyes-006.png",
+       "label": "目002-01",
+       "original": "目002-01.png"
+      },
+      {
+       "file": "eyes-007.png",
+       "path": "/pipoya/cat/eyes/eyes-007.png",
+       "label": "目002-02",
+       "original": "目002-02.png"
+      },
+      {
+       "file": "eyes-008.png",
+       "path": "/pipoya/cat/eyes/eyes-008.png",
+       "label": "目002-03",
+       "original": "目002-03.png"
+      },
+      {
+       "file": "eyes-009.png",
+       "path": "/pipoya/cat/eyes/eyes-009.png",
+       "label": "目002-04",
+       "original": "目002-04.png"
+      },
+      {
+       "file": "eyes-010.png",
+       "path": "/pipoya/cat/eyes/eyes-010.png",
+       "label": "目002-05",
+       "original": "目002-05.png"
+      },
+      {
+       "file": "eyes-011.png",
+       "path": "/pipoya/cat/eyes/eyes-011.png",
+       "label": "目003-01",
+       "original": "目003-01.png"
+      },
+      {
+       "file": "eyes-012.png",
+       "path": "/pipoya/cat/eyes/eyes-012.png",
+       "label": "目003-02",
+       "original": "目003-02.png"
+      },
+      {
+       "file": "eyes-013.png",
+       "path": "/pipoya/cat/eyes/eyes-013.png",
+       "label": "目003-03",
+       "original": "目003-03.png"
+      },
+      {
+       "file": "eyes-014.png",
+       "path": "/pipoya/cat/eyes/eyes-014.png",
+       "label": "目003-04",
+       "original": "目003-04.png"
+      },
+      {
+       "file": "eyes-015.png",
+       "path": "/pipoya/cat/eyes/eyes-015.png",
+       "label": "目003-05",
+       "original": "目003-05.png"
+      },
+      {
+       "file": "eyes-016.png",
+       "path": "/pipoya/cat/eyes/eyes-016.png",
+       "label": "目004-01",
+       "original": "目004-01.png"
+      },
+      {
+       "file": "eyes-017.png",
+       "path": "/pipoya/cat/eyes/eyes-017.png",
+       "label": "目004-02",
+       "original": "目004-02.png"
+      },
+      {
+       "file": "eyes-018.png",
+       "path": "/pipoya/cat/eyes/eyes-018.png",
+       "label": "目004-03",
+       "original": "目004-03.png"
+      },
+      {
+       "file": "eyes-019.png",
+       "path": "/pipoya/cat/eyes/eyes-019.png",
+       "label": "目004-04",
+       "original": "目004-04.png"
+      },
+      {
+       "file": "eyes-020.png",
+       "path": "/pipoya/cat/eyes/eyes-020.png",
+       "label": "目004-05",
+       "original": "目004-05.png"
+      },
+      {
+       "file": "eyes-021.png",
+       "path": "/pipoya/cat/eyes/eyes-021.png",
+       "label": "目005",
+       "original": "目005.png"
+      },
+      {
+       "file": "eyes-022.png",
+       "path": "/pipoya/cat/eyes/eyes-022.png",
+       "label": "目006",
+       "original": "目006.png"
+      },
+      {
+       "file": "eyes-023.png",
+       "path": "/pipoya/cat/eyes/eyes-023.png",
+       "label": "目007",
+       "original": "目007.png"
+      }
+     ]
+    },
+    "beard": {
+     "name": "胡须",
+     "order": 8,
+     "parts": [
+      {
+       "file": "beard-001.png",
+       "path": "/pipoya/cat/beard/beard-001.png",
+       "label": "ヒゲ001",
+       "original": "ヒゲ001.png"
+      }
+     ]
+    },
+    "tail": {
+     "name": "尾巴",
+     "order": 8,
+     "parts": [
+      {
+       "file": "tail-001.png",
+       "path": "/pipoya/cat/tail/tail-001.png",
+       "label": "カギ001",
+       "original": "カギ001.png"
+      },
+      {
+       "file": "tail-002.png",
+       "path": "/pipoya/cat/tail/tail-002.png",
+       "label": "カギ002",
+       "original": "カギ002.png"
+      },
+      {
+       "file": "tail-003.png",
+       "path": "/pipoya/cat/tail/tail-003.png",
+       "label": "カギ003",
+       "original": "カギ003.png"
+      },
+      {
+       "file": "tail-004.png",
+       "path": "/pipoya/cat/tail/tail-004.png",
+       "label": "カギ004",
+       "original": "カギ004.png"
+      },
+      {
+       "file": "tail-005.png",
+       "path": "/pipoya/cat/tail/tail-005.png",
+       "label": "カギ005",
+       "original": "カギ005.png"
+      },
+      {
+       "file": "tail-006.png",
+       "path": "/pipoya/cat/tail/tail-006.png",
+       "label": "カギ006",
+       "original": "カギ006.png"
+      },
+      {
+       "file": "tail-007.png",
+       "path": "/pipoya/cat/tail/tail-007.png",
+       "label": "カギ007",
+       "original": "カギ007.png"
+      },
+      {
+       "file": "tail-008.png",
+       "path": "/pipoya/cat/tail/tail-008.png",
+       "label": "カギ008",
+       "original": "カギ008.png"
+      },
+      {
+       "file": "tail-009.png",
+       "path": "/pipoya/cat/tail/tail-009.png",
+       "label": "カギ009",
+       "original": "カギ009.png"
+      },
+      {
+       "file": "tail-010.png",
+       "path": "/pipoya/cat/tail/tail-010.png",
+       "label": "カギ010",
+       "original": "カギ010.png"
+      },
+      {
+       "file": "tail-011.png",
+       "path": "/pipoya/cat/tail/tail-011.png",
+       "label": "カギ011",
+       "original": "カギ011.png"
+      },
+      {
+       "file": "tail-012.png",
+       "path": "/pipoya/cat/tail/tail-012.png",
+       "label": "カギ012",
+       "original": "カギ012.png"
+      },
+      {
+       "file": "tail-013.png",
+       "path": "/pipoya/cat/tail/tail-013.png",
+       "label": "クマ001",
+       "original": "クマ001.png"
+      },
+      {
+       "file": "tail-014.png",
+       "path": "/pipoya/cat/tail/tail-014.png",
+       "label": "クマ002",
+       "original": "クマ002.png"
+      },
+      {
+       "file": "tail-015.png",
+       "path": "/pipoya/cat/tail/tail-015.png",
+       "label": "クマ003",
+       "original": "クマ003.png"
+      },
+      {
+       "file": "tail-016.png",
+       "path": "/pipoya/cat/tail/tail-016.png",
+       "label": "クマ004",
+       "original": "クマ004.png"
+      },
+      {
+       "file": "tail-017.png",
+       "path": "/pipoya/cat/tail/tail-017.png",
+       "label": "クマ005",
+       "original": "クマ005.png"
+      },
+      {
+       "file": "tail-018.png",
+       "path": "/pipoya/cat/tail/tail-018.png",
+       "label": "ボブ001",
+       "original": "ボブ001.png"
+      },
+      {
+       "file": "tail-019.png",
+       "path": "/pipoya/cat/tail/tail-019.png",
+       "label": "ボブ002",
+       "original": "ボブ002.png"
+      },
+      {
+       "file": "tail-020.png",
+       "path": "/pipoya/cat/tail/tail-020.png",
+       "label": "ボブ003",
+       "original": "ボブ003.png"
+      },
+      {
+       "file": "tail-021.png",
+       "path": "/pipoya/cat/tail/tail-021.png",
+       "label": "ボブ004",
+       "original": "ボブ004.png"
+      },
+      {
+       "file": "tail-022.png",
+       "path": "/pipoya/cat/tail/tail-022.png",
+       "label": "ボブ005",
+       "original": "ボブ005.png"
+      },
+      {
+       "file": "tail-023.png",
+       "path": "/pipoya/cat/tail/tail-023.png",
+       "label": "ボブ006",
+       "original": "ボブ006.png"
+      },
+      {
+       "file": "tail-024.png",
+       "path": "/pipoya/cat/tail/tail-024.png",
+       "label": "ボブ007",
+       "original": "ボブ007.png"
+      },
+      {
+       "file": "tail-025.png",
+       "path": "/pipoya/cat/tail/tail-025.png",
+       "label": "ボブ008",
+       "original": "ボブ008.png"
+      },
+      {
+       "file": "tail-026.png",
+       "path": "/pipoya/cat/tail/tail-026.png",
+       "label": "ボブ009",
+       "original": "ボブ009.png"
+      },
+      {
+       "file": "tail-027.png",
+       "path": "/pipoya/cat/tail/tail-027.png",
+       "label": "ボブ010",
+       "original": "ボブ010.png"
+      },
+      {
+       "file": "tail-028.png",
+       "path": "/pipoya/cat/tail/tail-028.png",
+       "label": "ボブ011",
+       "original": "ボブ011.png"
+      },
+      {
+       "file": "tail-029.png",
+       "path": "/pipoya/cat/tail/tail-029.png",
+       "label": "ボブ012",
+       "original": "ボブ012.png"
+      },
+      {
+       "file": "tail-030.png",
+       "path": "/pipoya/cat/tail/tail-030.png",
+       "label": "尻尾001",
+       "original": "尻尾001.png"
+      },
+      {
+       "file": "tail-031.png",
+       "path": "/pipoya/cat/tail/tail-031.png",
+       "label": "尻尾002",
+       "original": "尻尾002.png"
+      },
+      {
+       "file": "tail-032.png",
+       "path": "/pipoya/cat/tail/tail-032.png",
+       "label": "尻尾003",
+       "original": "尻尾003.png"
+      },
+      {
+       "file": "tail-033.png",
+       "path": "/pipoya/cat/tail/tail-033.png",
+       "label": "尻尾004",
+       "original": "尻尾004.png"
+      },
+      {
+       "file": "tail-034.png",
+       "path": "/pipoya/cat/tail/tail-034.png",
+       "label": "尻尾005",
+       "original": "尻尾005.png"
+      },
+      {
+       "file": "tail-035.png",
+       "path": "/pipoya/cat/tail/tail-035.png",
+       "label": "尻尾006",
+       "original": "尻尾006.png"
+      },
+      {
+       "file": "tail-036.png",
+       "path": "/pipoya/cat/tail/tail-036.png",
+       "label": "尻尾007",
+       "original": "尻尾007.png"
+      },
+      {
+       "file": "tail-037.png",
+       "path": "/pipoya/cat/tail/tail-037.png",
+       "label": "尻尾008",
+       "original": "尻尾008.png"
+      },
+      {
+       "file": "tail-038.png",
+       "path": "/pipoya/cat/tail/tail-038.png",
+       "label": "尻尾009",
+       "original": "尻尾009.png"
+      },
+      {
+       "file": "tail-039.png",
+       "path": "/pipoya/cat/tail/tail-039.png",
+       "label": "尻尾010",
+       "original": "尻尾010.png"
+      },
+      {
+       "file": "tail-040.png",
+       "path": "/pipoya/cat/tail/tail-040.png",
+       "label": "尻尾011",
+       "original": "尻尾011.png"
+      },
+      {
+       "file": "tail-041.png",
+       "path": "/pipoya/cat/tail/tail-041.png",
+       "label": "尻尾012",
+       "original": "尻尾012.png"
+      }
+     ]
+    },
+    "item-1": {
+     "name": "道具1",
+     "order": 14,
+     "parts": []
+    },
+    "item-2": {
+     "name": "道具2",
+     "order": 15,
+     "parts": []
+    },
+    "effect": {
+     "name": "特效",
+     "order": 17,
+     "parts": []
+    },
+    "cloak": {
+     "name": "披风",
+     "order": 7,
+     "parts": [
+      {
+       "file": "cloak-001.png",
+       "path": "/pipoya/cat/cloak/cloak-001.png",
+       "label": "スカーフ001-01",
+       "original": "スカーフ001-01.png"
+      },
+      {
+       "file": "cloak-002.png",
+       "path": "/pipoya/cat/cloak/cloak-002.png",
+       "label": "スカーフ001-02",
+       "original": "スカーフ001-02.png"
+      },
+      {
+       "file": "cloak-003.png",
+       "path": "/pipoya/cat/cloak/cloak-003.png",
+       "label": "スカーフ001-03",
+       "original": "スカーフ001-03.png"
+      },
+      {
+       "file": "cloak-004.png",
+       "path": "/pipoya/cat/cloak/cloak-004.png",
+       "label": "ネクタイ001-01",
+       "original": "ネクタイ001-01.png"
+      },
+      {
+       "file": "cloak-005.png",
+       "path": "/pipoya/cat/cloak/cloak-005.png",
+       "label": "ネクタイ001-02",
+       "original": "ネクタイ001-02.png"
+      },
+      {
+       "file": "cloak-006.png",
+       "path": "/pipoya/cat/cloak/cloak-006.png",
+       "label": "ネクタイ001-03",
+       "original": "ネクタイ001-03.png"
+      },
+      {
+       "file": "cloak-007.png",
+       "path": "/pipoya/cat/cloak/cloak-007.png",
+       "label": "マント001-01",
+       "original": "マント001-01.png"
+      },
+      {
+       "file": "cloak-008.png",
+       "path": "/pipoya/cat/cloak/cloak-008.png",
+       "label": "マント001-02",
+       "original": "マント001-02.png"
+      },
+      {
+       "file": "cloak-009.png",
+       "path": "/pipoya/cat/cloak/cloak-009.png",
+       "label": "マント001-03",
+       "original": "マント001-03.png"
+      },
+      {
+       "file": "cloak-010.png",
+       "path": "/pipoya/cat/cloak/cloak-010.png",
+       "label": "マント002_魔王",
+       "original": "マント002_魔王.png"
+      },
+      {
+       "file": "cloak-011.png",
+       "path": "/pipoya/cat/cloak/cloak-011.png",
+       "label": "メダル001-01",
+       "original": "メダル001-01.png"
+      },
+      {
+       "file": "cloak-012.png",
+       "path": "/pipoya/cat/cloak/cloak-012.png",
+       "label": "メダル001-02",
+       "original": "メダル001-02.png"
+      },
+      {
+       "file": "cloak-013.png",
+       "path": "/pipoya/cat/cloak/cloak-013.png",
+       "label": "メダル001-03",
+       "original": "メダル001-03.png"
+      },
+      {
+       "file": "cloak-014.png",
+       "path": "/pipoya/cat/cloak/cloak-014.png",
+       "label": "大きな翼-01",
+       "original": "大きな翼-01.png"
+      },
+      {
+       "file": "cloak-015.png",
+       "path": "/pipoya/cat/cloak/cloak-015.png",
+       "label": "大きな翼-02",
+       "original": "大きな翼-02.png"
+      },
+      {
+       "file": "cloak-016.png",
+       "path": "/pipoya/cat/cloak/cloak-016.png",
+       "label": "大きな翼-03",
+       "original": "大きな翼-03.png"
+      },
+      {
+       "file": "cloak-017.png",
+       "path": "/pipoya/cat/cloak/cloak-017.png",
+       "label": "天使の翼001-01",
+       "original": "天使の翼001-01.png"
+      },
+      {
+       "file": "cloak-018.png",
+       "path": "/pipoya/cat/cloak/cloak-018.png",
+       "label": "悪魔の翼001-01",
+       "original": "悪魔の翼001-01.png"
+      },
+      {
+       "file": "cloak-019.png",
+       "path": "/pipoya/cat/cloak/cloak-019.png",
+       "label": "浮き輪001-01",
+       "original": "浮き輪001-01.png"
+      },
+      {
+       "file": "cloak-020.png",
+       "path": "/pipoya/cat/cloak/cloak-020.png",
+       "label": "浮き輪001-02",
+       "original": "浮き輪001-02.png"
+      },
+      {
+       "file": "cloak-021.png",
+       "path": "/pipoya/cat/cloak/cloak-021.png",
+       "label": "浮き輪001-03",
+       "original": "浮き輪001-03.png"
+      },
+      {
+       "file": "cloak-022.png",
+       "path": "/pipoya/cat/cloak/cloak-022.png",
+       "label": "蝶ネクタイ001-01",
+       "original": "蝶ネクタイ001-01.png"
+      },
+      {
+       "file": "cloak-023.png",
+       "path": "/pipoya/cat/cloak/cloak-023.png",
+       "label": "蝶ネクタイ001-02",
+       "original": "蝶ネクタイ001-02.png"
+      },
+      {
+       "file": "cloak-024.png",
+       "path": "/pipoya/cat/cloak/cloak-024.png",
+       "label": "蝶ネクタイ001-03",
+       "original": "蝶ネクタイ001-03.png"
+      },
+      {
+       "file": "cloak-025.png",
+       "path": "/pipoya/cat/cloak/cloak-025.png",
+       "label": "首輪001",
+       "original": "首輪001.png"
+      },
+      {
+       "file": "cloak-026.png",
+       "path": "/pipoya/cat/cloak/cloak-026.png",
+       "label": "首輪002_鈴付き",
+       "original": "首輪002_鈴付き.png"
+      }
+     ]
+    },
+    "makeup": {
+     "name": "妆容",
+     "order": 3,
+     "parts": [
+      {
+       "file": "makeup-001.png",
+       "path": "/pipoya/cat/makeup/makeup-001.png",
+       "label": "メイク001_傷跡-01",
+       "original": "メイク001_傷跡-01.png"
+      },
+      {
+       "file": "makeup-002.png",
+       "path": "/pipoya/cat/makeup/makeup-002.png",
+       "label": "メイク001_傷跡-02",
+       "original": "メイク001_傷跡-02.png"
+      },
+      {
+       "file": "makeup-003.png",
+       "path": "/pipoya/cat/makeup/makeup-003.png",
+       "label": "メイク002_お魚",
+       "original": "メイク002_お魚.png"
+      },
+      {
+       "file": "makeup-004.png",
+       "path": "/pipoya/cat/makeup/makeup-004.png",
+       "label": "メイク003_目隠し-01",
+       "original": "メイク003_目隠し-01.png"
+      },
+      {
+       "file": "makeup-005.png",
+       "path": "/pipoya/cat/makeup/makeup-005.png",
+       "label": "メイク003_目隠し-02",
+       "original": "メイク003_目隠し-02.png"
+      },
+      {
+       "file": "makeup-006.png",
+       "path": "/pipoya/cat/makeup/makeup-006.png",
+       "label": "メイク003_目隠し-03",
+       "original": "メイク003_目隠し-03.png"
+      },
+      {
+       "file": "makeup-007.png",
+       "path": "/pipoya/cat/makeup/makeup-007.png",
+       "label": "メイク004_頬紅",
+       "original": "メイク004_頬紅.png"
+      }
+     ]
+    },
+    "glasses": {
+     "name": "眼镜",
+     "order": 9,
+     "parts": [
+      {
+       "file": "glasses-001.png",
+       "path": "/pipoya/cat/glasses/glasses-001.png",
+       "label": "くちばし-01",
+       "original": "くちばし-01.png"
+      },
+      {
+       "file": "glasses-002.png",
+       "path": "/pipoya/cat/glasses/glasses-002.png",
+       "label": "くちばし-02",
+       "original": "くちばし-02.png"
+      },
+      {
+       "file": "glasses-003.png",
+       "path": "/pipoya/cat/glasses/glasses-003.png",
+       "label": "シュノーケル-01",
+       "original": "シュノーケル-01.png"
+      },
+      {
+       "file": "glasses-004.png",
+       "path": "/pipoya/cat/glasses/glasses-004.png",
+       "label": "シュノーケル-02",
+       "original": "シュノーケル-02.png"
+      },
+      {
+       "file": "glasses-005.png",
+       "path": "/pipoya/cat/glasses/glasses-005.png",
+       "label": "シュノーケル-03",
+       "original": "シュノーケル-03.png"
+      },
+      {
+       "file": "glasses-006.png",
+       "path": "/pipoya/cat/glasses/glasses-006.png",
+       "label": "メガネ001-01",
+       "original": "メガネ001-01.png"
+      },
+      {
+       "file": "glasses-007.png",
+       "path": "/pipoya/cat/glasses/glasses-007.png",
+       "label": "メガネ001-02",
+       "original": "メガネ001-02.png"
+      },
+      {
+       "file": "glasses-008.png",
+       "path": "/pipoya/cat/glasses/glasses-008.png",
+       "label": "メガネ002-01",
+       "original": "メガネ002-01.png"
+      },
+      {
+       "file": "glasses-009.png",
+       "path": "/pipoya/cat/glasses/glasses-009.png",
+       "label": "メガネ002-02",
+       "original": "メガネ002-02.png"
+      },
+      {
+       "file": "glasses-010.png",
+       "path": "/pipoya/cat/glasses/glasses-010.png",
+       "label": "メガネ003",
+       "original": "メガネ003.png"
+      },
+      {
+       "file": "glasses-011.png",
+       "path": "/pipoya/cat/glasses/glasses-011.png",
+       "label": "眼帯001-右",
+       "original": "眼帯001-右.png"
+      },
+      {
+       "file": "glasses-012.png",
+       "path": "/pipoya/cat/glasses/glasses-012.png",
+       "label": "眼帯001-左",
+       "original": "眼帯001-左.png"
+      }
+     ]
+    },
+    "hat": {
+     "name": "帽子",
+     "order": 10,
+     "parts": [
+      {
+       "file": "hat-001.png",
+       "path": "/pipoya/cat/hat/hat-001.png",
+       "label": "リボン001_右-01",
+       "original": "リボン001_右-01.png"
+      },
+      {
+       "file": "hat-002.png",
+       "path": "/pipoya/cat/hat/hat-002.png",
+       "label": "リボン001_右-02",
+       "original": "リボン001_右-02.png"
+      },
+      {
+       "file": "hat-003.png",
+       "path": "/pipoya/cat/hat/hat-003.png",
+       "label": "リボン001_右-03",
+       "original": "リボン001_右-03.png"
+      },
+      {
+       "file": "hat-004.png",
+       "path": "/pipoya/cat/hat/hat-004.png",
+       "label": "リボン001_左-01",
+       "original": "リボン001_左-01.png"
+      },
+      {
+       "file": "hat-005.png",
+       "path": "/pipoya/cat/hat/hat-005.png",
+       "label": "リボン001_左-02",
+       "original": "リボン001_左-02.png"
+      },
+      {
+       "file": "hat-006.png",
+       "path": "/pipoya/cat/hat/hat-006.png",
+       "label": "リボン001_左-03",
+       "original": "リボン001_左-03.png"
+      },
+      {
+       "file": "hat-007.png",
+       "path": "/pipoya/cat/hat/hat-007.png",
+       "label": "天使の輪-01",
+       "original": "天使の輪-01.png"
+      },
+      {
+       "file": "hat-008.png",
+       "path": "/pipoya/cat/hat/hat-008.png",
+       "label": "帽子001_勇者の冠",
+       "original": "帽子001_勇者の冠.png"
+      },
+      {
+       "file": "hat-009.png",
+       "path": "/pipoya/cat/hat/hat-009.png",
+       "label": "帽子002_魔王の兜",
+       "original": "帽子002_魔王の兜.png"
+      },
+      {
+       "file": "hat-010.png",
+       "path": "/pipoya/cat/hat/hat-010.png",
+       "label": "帽子003-01",
+       "original": "帽子003-01.png"
+      },
+      {
+       "file": "hat-011.png",
+       "path": "/pipoya/cat/hat/hat-011.png",
+       "label": "帽子003-02",
+       "original": "帽子003-02.png"
+      },
+      {
+       "file": "hat-012.png",
+       "path": "/pipoya/cat/hat/hat-012.png",
+       "label": "帽子003-03",
+       "original": "帽子003-03.png"
+      },
+      {
+       "file": "hat-013.png",
+       "path": "/pipoya/cat/hat/hat-013.png",
+       "label": "帽子004_パンツ-01",
+       "original": "帽子004_パンツ-01.png"
+      },
+      {
+       "file": "hat-014.png",
+       "path": "/pipoya/cat/hat/hat-014.png",
+       "label": "帽子004_パンツ-02",
+       "original": "帽子004_パンツ-02.png"
+      },
+      {
+       "file": "hat-015.png",
+       "path": "/pipoya/cat/hat/hat-015.png",
+       "label": "帽子004_パンツ-03",
+       "original": "帽子004_パンツ-03.png"
+      },
+      {
+       "file": "hat-016.png",
+       "path": "/pipoya/cat/hat/hat-016.png",
+       "label": "帽子004_パンツ-04",
+       "original": "帽子004_パンツ-04.png"
+      },
+      {
+       "file": "hat-017.png",
+       "path": "/pipoya/cat/hat/hat-017.png",
+       "label": "帽子005_麦わら-01",
+       "original": "帽子005_麦わら-01.png"
+      },
+      {
+       "file": "hat-018.png",
+       "path": "/pipoya/cat/hat/hat-018.png",
+       "label": "帽子005_麦わら-02",
+       "original": "帽子005_麦わら-02.png"
+      },
+      {
+       "file": "hat-019.png",
+       "path": "/pipoya/cat/hat/hat-019.png",
+       "label": "帽子006_スイカ-01",
+       "original": "帽子006_スイカ-01.png"
+      },
+      {
+       "file": "hat-020.png",
+       "path": "/pipoya/cat/hat/hat-020.png",
+       "label": "帽子007_カボチャ-01",
+       "original": "帽子007_カボチャ-01.png"
+      },
+      {
+       "file": "hat-021.png",
+       "path": "/pipoya/cat/hat/hat-021.png",
+       "label": "帽子007_カボチャ-02",
+       "original": "帽子007_カボチャ-02.png"
+      },
+      {
+       "file": "hat-022.png",
+       "path": "/pipoya/cat/hat/hat-022.png",
+       "label": "帽子008_魔法使い-01",
+       "original": "帽子008_魔法使い-01.png"
+      },
+      {
+       "file": "hat-023.png",
+       "path": "/pipoya/cat/hat/hat-023.png",
+       "label": "帽子008_魔法使い-02",
+       "original": "帽子008_魔法使い-02.png"
+      },
+      {
+       "file": "hat-024.png",
+       "path": "/pipoya/cat/hat/hat-024.png",
+       "label": "帽子009_月桂樹の冠-01",
+       "original": "帽子009_月桂樹の冠-01.png"
+      },
+      {
+       "file": "hat-025.png",
+       "path": "/pipoya/cat/hat/hat-025.png",
+       "label": "悪魔の角-01",
+       "original": "悪魔の角-01.png"
+      },
+      {
+       "file": "hat-026.png",
+       "path": "/pipoya/cat/hat/hat-026.png",
+       "label": "悪魔の角-02",
+       "original": "悪魔の角-02.png"
+      },
+      {
+       "file": "hat-027.png",
+       "path": "/pipoya/cat/hat/hat-027.png",
+       "label": "悪魔の角-03",
+       "original": "悪魔の角-03.png"
+      }
+     ]
+    },
+    "shadow": {
+     "name": "阴影",
+     "order": 0,
+     "parts": [
+      {
+       "file": "shadow-001.png",
+       "path": "/pipoya/cat/shadow/shadow-001.png",
+       "label": "影1",
+       "original": "影1.png"
+      },
+      {
+       "file": "shadow-002.png",
+       "path": "/pipoya/cat/shadow/shadow-002.png",
+       "label": "影2",
+       "original": "影2.png"
+      }
+     ]
+    },
+    "head-extra": {
+     "name": "头部配件",
+     "order": 13,
+     "parts": [
+      {
+       "file": "head-extra-001.png",
+       "path": "/pipoya/cat/head-extra/head-extra-001.png",
+       "label": "耳色調整用001",
+       "original": "耳色調整用001.png"
+      },
+      {
+       "file": "head-extra-002.png",
+       "path": "/pipoya/cat/head-extra/head-extra-002.png",
+       "label": "耳色調整用002",
+       "original": "耳色調整用002.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "slug": "adult",
+   "name": "成年",
+   "categories": {
+    "clothes": {
+     "name": "服装",
+     "order": 6,
+     "parts": [
+      {
+       "file": "clothes-001.png",
+       "path": "/pipoya/adult/clothes/clothes-001.png",
+       "label": "女_服001_一般人",
+       "original": "女_服001_一般人.png"
+      },
+      {
+       "file": "clothes-002.png",
+       "path": "/pipoya/adult/clothes/clothes-002.png",
+       "label": "女_服002_一般人",
+       "original": "女_服002_一般人.png"
+      },
+      {
+       "file": "clothes-003.png",
+       "path": "/pipoya/adult/clothes/clothes-003.png",
+       "label": "女_服003_メイド",
+       "original": "女_服003_メイド.png"
+      },
+      {
+       "file": "clothes-004.png",
+       "path": "/pipoya/adult/clothes/clothes-004.png",
+       "label": "女_服004_王妃",
+       "original": "女_服004_王妃.png"
+      },
+      {
+       "file": "clothes-005.png",
+       "path": "/pipoya/adult/clothes/clothes-005.png",
+       "label": "女_服005_勇者",
+       "original": "女_服005_勇者.png"
+      },
+      {
+       "file": "clothes-006.png",
+       "path": "/pipoya/adult/clothes/clothes-006.png",
+       "label": "女_服006_戦士",
+       "original": "女_服006_戦士.png"
+      },
+      {
+       "file": "clothes-007.png",
+       "path": "/pipoya/adult/clothes/clothes-007.png",
+       "label": "女_服007_魔女",
+       "original": "女_服007_魔女.png"
+      },
+      {
+       "file": "clothes-008.png",
+       "path": "/pipoya/adult/clothes/clothes-008.png",
+       "label": "女_服008_僧侶",
+       "original": "女_服008_僧侶.png"
+      },
+      {
+       "file": "clothes-009.png",
+       "path": "/pipoya/adult/clothes/clothes-009.png",
+       "label": "女_服009_盗賊",
+       "original": "女_服009_盗賊.png"
+      },
+      {
+       "file": "clothes-010.png",
+       "path": "/pipoya/adult/clothes/clothes-010.png",
+       "label": "女_服010_下着-01",
+       "original": "女_服010_下着-01.png"
+      },
+      {
+       "file": "clothes-011.png",
+       "path": "/pipoya/adult/clothes/clothes-011.png",
+       "label": "女_服010_下着-02",
+       "original": "女_服010_下着-02.png"
+      },
+      {
+       "file": "clothes-012.png",
+       "path": "/pipoya/adult/clothes/clothes-012.png",
+       "label": "女_服010_下着-03",
+       "original": "女_服010_下着-03.png"
+      },
+      {
+       "file": "clothes-013.png",
+       "path": "/pipoya/adult/clothes/clothes-013.png",
+       "label": "女_服011_学生-01",
+       "original": "女_服011_学生-01.png"
+      },
+      {
+       "file": "clothes-014.png",
+       "path": "/pipoya/adult/clothes/clothes-014.png",
+       "label": "女_服011_学生-02",
+       "original": "女_服011_学生-02.png"
+      },
+      {
+       "file": "clothes-015.png",
+       "path": "/pipoya/adult/clothes/clothes-015.png",
+       "label": "女_服011_学生-03",
+       "original": "女_服011_学生-03.png"
+      },
+      {
+       "file": "clothes-016.png",
+       "path": "/pipoya/adult/clothes/clothes-016.png",
+       "label": "女_服012_学生-01",
+       "original": "女_服012_学生-01.png"
+      },
+      {
+       "file": "clothes-017.png",
+       "path": "/pipoya/adult/clothes/clothes-017.png",
+       "label": "女_服012_学生-02",
+       "original": "女_服012_学生-02.png"
+      },
+      {
+       "file": "clothes-018.png",
+       "path": "/pipoya/adult/clothes/clothes-018.png",
+       "label": "女_服012_学生-03",
+       "original": "女_服012_学生-03.png"
+      },
+      {
+       "file": "clothes-019.png",
+       "path": "/pipoya/adult/clothes/clothes-019.png",
+       "label": "女_服013_スーツ-01",
+       "original": "女_服013_スーツ-01.png"
+      },
+      {
+       "file": "clothes-020.png",
+       "path": "/pipoya/adult/clothes/clothes-020.png",
+       "label": "女_服013_スーツ-02",
+       "original": "女_服013_スーツ-02.png"
+      },
+      {
+       "file": "clothes-021.png",
+       "path": "/pipoya/adult/clothes/clothes-021.png",
+       "label": "女_服013_スーツ-03",
+       "original": "女_服013_スーツ-03.png"
+      },
+      {
+       "file": "clothes-022.png",
+       "path": "/pipoya/adult/clothes/clothes-022.png",
+       "label": "女_服014_スーツ-01",
+       "original": "女_服014_スーツ-01.png"
+      },
+      {
+       "file": "clothes-023.png",
+       "path": "/pipoya/adult/clothes/clothes-023.png",
+       "label": "女_服014_スーツ-02",
+       "original": "女_服014_スーツ-02.png"
+      },
+      {
+       "file": "clothes-024.png",
+       "path": "/pipoya/adult/clothes/clothes-024.png",
+       "label": "女_服014_スーツ-03",
+       "original": "女_服014_スーツ-03.png"
+      },
+      {
+       "file": "clothes-025.png",
+       "path": "/pipoya/adult/clothes/clothes-025.png",
+       "label": "女_服015_葉っぱ",
+       "original": "女_服015_葉っぱ.png"
+      },
+      {
+       "file": "clothes-026.png",
+       "path": "/pipoya/adult/clothes/clothes-026.png",
+       "label": "女_服016_水着ビキニ-01",
+       "original": "女_服016_水着ビキニ-01.png"
+      },
+      {
+       "file": "clothes-027.png",
+       "path": "/pipoya/adult/clothes/clothes-027.png",
+       "label": "女_服016_水着ビキニ-02",
+       "original": "女_服016_水着ビキニ-02.png"
+      },
+      {
+       "file": "clothes-028.png",
+       "path": "/pipoya/adult/clothes/clothes-028.png",
+       "label": "女_服017_水着ワンピース-01",
+       "original": "女_服017_水着ワンピース-01.png"
+      },
+      {
+       "file": "clothes-029.png",
+       "path": "/pipoya/adult/clothes/clothes-029.png",
+       "label": "女_服017_水着ワンピース-02",
+       "original": "女_服017_水着ワンピース-02.png"
+      },
+      {
+       "file": "clothes-030.png",
+       "path": "/pipoya/adult/clothes/clothes-030.png",
+       "label": "女_服018_水着セクシー-01",
+       "original": "女_服018_水着セクシー-01.png"
+      },
+      {
+       "file": "clothes-031.png",
+       "path": "/pipoya/adult/clothes/clothes-031.png",
+       "label": "女_服018_水着セクシー-02",
+       "original": "女_服018_水着セクシー-02.png"
+      },
+      {
+       "file": "clothes-032.png",
+       "path": "/pipoya/adult/clothes/clothes-032.png",
+       "label": "女_服019_バスタオル-01",
+       "original": "女_服019_バスタオル-01.png"
+      },
+      {
+       "file": "clothes-033.png",
+       "path": "/pipoya/adult/clothes/clothes-033.png",
+       "label": "女_服019_バスタオル-02",
+       "original": "女_服019_バスタオル-02.png"
+      },
+      {
+       "file": "clothes-034.png",
+       "path": "/pipoya/adult/clothes/clothes-034.png",
+       "label": "男_服001_一般人",
+       "original": "男_服001_一般人.png"
+      },
+      {
+       "file": "clothes-035.png",
+       "path": "/pipoya/adult/clothes/clothes-035.png",
+       "label": "男_服002_一般人",
+       "original": "男_服002_一般人.png"
+      },
+      {
+       "file": "clothes-036.png",
+       "path": "/pipoya/adult/clothes/clothes-036.png",
+       "label": "男_服003_兵士-01",
+       "original": "男_服003_兵士-01.png"
+      },
+      {
+       "file": "clothes-037.png",
+       "path": "/pipoya/adult/clothes/clothes-037.png",
+       "label": "男_服003_兵士-02",
+       "original": "男_服003_兵士-02.png"
+      },
+      {
+       "file": "clothes-038.png",
+       "path": "/pipoya/adult/clothes/clothes-038.png",
+       "label": "男_服003_兵士-03",
+       "original": "男_服003_兵士-03.png"
+      },
+      {
+       "file": "clothes-039.png",
+       "path": "/pipoya/adult/clothes/clothes-039.png",
+       "label": "男_服004_神官",
+       "original": "男_服004_神官.png"
+      },
+      {
+       "file": "clothes-040.png",
+       "path": "/pipoya/adult/clothes/clothes-040.png",
+       "label": "男_服005_大臣",
+       "original": "男_服005_大臣.png"
+      },
+      {
+       "file": "clothes-041.png",
+       "path": "/pipoya/adult/clothes/clothes-041.png",
+       "label": "男_服006_王",
+       "original": "男_服006_王.png"
+      },
+      {
+       "file": "clothes-042.png",
+       "path": "/pipoya/adult/clothes/clothes-042.png",
+       "label": "男_服007_勇者",
+       "original": "男_服007_勇者.png"
+      },
+      {
+       "file": "clothes-043.png",
+       "path": "/pipoya/adult/clothes/clothes-043.png",
+       "label": "男_服008_戦士",
+       "original": "男_服008_戦士.png"
+      },
+      {
+       "file": "clothes-044.png",
+       "path": "/pipoya/adult/clothes/clothes-044.png",
+       "label": "男_服009_魔法使い",
+       "original": "男_服009_魔法使い.png"
+      },
+      {
+       "file": "clothes-045.png",
+       "path": "/pipoya/adult/clothes/clothes-045.png",
+       "label": "男_服010_僧侶",
+       "original": "男_服010_僧侶.png"
+      },
+      {
+       "file": "clothes-046.png",
+       "path": "/pipoya/adult/clothes/clothes-046.png",
+       "label": "男_服011_盗賊",
+       "original": "男_服011_盗賊.png"
+      },
+      {
+       "file": "clothes-047.png",
+       "path": "/pipoya/adult/clothes/clothes-047.png",
+       "label": "男_服012_下着-01",
+       "original": "男_服012_下着-01.png"
+      },
+      {
+       "file": "clothes-048.png",
+       "path": "/pipoya/adult/clothes/clothes-048.png",
+       "label": "男_服012_下着-02",
+       "original": "男_服012_下着-02.png"
+      },
+      {
+       "file": "clothes-049.png",
+       "path": "/pipoya/adult/clothes/clothes-049.png",
+       "label": "男_服012_下着-03",
+       "original": "男_服012_下着-03.png"
+      },
+      {
+       "file": "clothes-050.png",
+       "path": "/pipoya/adult/clothes/clothes-050.png",
+       "label": "男_服013_学生-01",
+       "original": "男_服013_学生-01.png"
+      },
+      {
+       "file": "clothes-051.png",
+       "path": "/pipoya/adult/clothes/clothes-051.png",
+       "label": "男_服013_学生-02",
+       "original": "男_服013_学生-02.png"
+      },
+      {
+       "file": "clothes-052.png",
+       "path": "/pipoya/adult/clothes/clothes-052.png",
+       "label": "男_服013_学生-03",
+       "original": "男_服013_学生-03.png"
+      },
+      {
+       "file": "clothes-053.png",
+       "path": "/pipoya/adult/clothes/clothes-053.png",
+       "label": "男_服014_学生-01",
+       "original": "男_服014_学生-01.png"
+      },
+      {
+       "file": "clothes-054.png",
+       "path": "/pipoya/adult/clothes/clothes-054.png",
+       "label": "男_服014_学生-02",
+       "original": "男_服014_学生-02.png"
+      },
+      {
+       "file": "clothes-055.png",
+       "path": "/pipoya/adult/clothes/clothes-055.png",
+       "label": "男_服014_学生-03",
+       "original": "男_服014_学生-03.png"
+      },
+      {
+       "file": "clothes-056.png",
+       "path": "/pipoya/adult/clothes/clothes-056.png",
+       "label": "男_服015_スーツ-01",
+       "original": "男_服015_スーツ-01.png"
+      },
+      {
+       "file": "clothes-057.png",
+       "path": "/pipoya/adult/clothes/clothes-057.png",
+       "label": "男_服015_スーツ-02",
+       "original": "男_服015_スーツ-02.png"
+      },
+      {
+       "file": "clothes-058.png",
+       "path": "/pipoya/adult/clothes/clothes-058.png",
+       "label": "男_服015_スーツ-03",
+       "original": "男_服015_スーツ-03.png"
+      },
+      {
+       "file": "clothes-059.png",
+       "path": "/pipoya/adult/clothes/clothes-059.png",
+       "label": "男_服016_スーツ-01",
+       "original": "男_服016_スーツ-01.png"
+      },
+      {
+       "file": "clothes-060.png",
+       "path": "/pipoya/adult/clothes/clothes-060.png",
+       "label": "男_服016_スーツ-02",
+       "original": "男_服016_スーツ-02.png"
+      },
+      {
+       "file": "clothes-061.png",
+       "path": "/pipoya/adult/clothes/clothes-061.png",
+       "label": "男_服016_スーツ-03",
+       "original": "男_服016_スーツ-03.png"
+      },
+      {
+       "file": "clothes-062.png",
+       "path": "/pipoya/adult/clothes/clothes-062.png",
+       "label": "男_服017_葉っぱ",
+       "original": "男_服017_葉っぱ.png"
+      },
+      {
+       "file": "clothes-063.png",
+       "path": "/pipoya/adult/clothes/clothes-063.png",
+       "label": "男_服018_水着短パン-01",
+       "original": "男_服018_水着短パン-01.png"
+      },
+      {
+       "file": "clothes-064.png",
+       "path": "/pipoya/adult/clothes/clothes-064.png",
+       "label": "男_服018_水着短パン-02",
+       "original": "男_服018_水着短パン-02.png"
+      },
+      {
+       "file": "clothes-065.png",
+       "path": "/pipoya/adult/clothes/clothes-065.png",
+       "label": "男_服019_水着ブーメラン-01",
+       "original": "男_服019_水着ブーメラン-01.png"
+      },
+      {
+       "file": "clothes-066.png",
+       "path": "/pipoya/adult/clothes/clothes-066.png",
+       "label": "男_服019_水着ブーメラン-02",
+       "original": "男_服019_水着ブーメラン-02.png"
+      },
+      {
+       "file": "clothes-067.png",
+       "path": "/pipoya/adult/clothes/clothes-067.png",
+       "label": "男_服020_水着ふんどし-01",
+       "original": "男_服020_水着ふんどし-01.png"
+      },
+      {
+       "file": "clothes-068.png",
+       "path": "/pipoya/adult/clothes/clothes-068.png",
+       "label": "男_服020_水着ふんどし-02",
+       "original": "男_服020_水着ふんどし-02.png"
+      },
+      {
+       "file": "clothes-069.png",
+       "path": "/pipoya/adult/clothes/clothes-069.png",
+       "label": "男_服021_タオル-01",
+       "original": "男_服021_タオル-01.png"
+      },
+      {
+       "file": "clothes-070.png",
+       "path": "/pipoya/adult/clothes/clothes-070.png",
+       "label": "男_服021_タオル-02",
+       "original": "男_服021_タオル-02.png"
+      }
+     ]
+    },
+    "skin": {
+     "name": "皮肤",
+     "order": 2,
+     "parts": [
+      {
+       "file": "skin-001.png",
+       "path": "/pipoya/adult/skin/skin-001.png",
+       "label": "おばけ_ベース-01",
+       "original": "おばけ_ベース-01.png"
+      },
+      {
+       "file": "skin-002.png",
+       "path": "/pipoya/adult/skin/skin-002.png",
+       "label": "おばけ_ベース-02",
+       "original": "おばけ_ベース-02.png"
+      },
+      {
+       "file": "skin-003.png",
+       "path": "/pipoya/adult/skin/skin-003.png",
+       "label": "おばけ_ベース-03",
+       "original": "おばけ_ベース-03.png"
+      },
+      {
+       "file": "skin-004.png",
+       "path": "/pipoya/adult/skin/skin-004.png",
+       "label": "おばけ_ベース-04",
+       "original": "おばけ_ベース-04.png"
+      },
+      {
+       "file": "skin-005.png",
+       "path": "/pipoya/adult/skin/skin-005.png",
+       "label": "女_ベース001-01",
+       "original": "女_ベース001-01.png"
+      },
+      {
+       "file": "skin-006.png",
+       "path": "/pipoya/adult/skin/skin-006.png",
+       "label": "女_ベース001-02",
+       "original": "女_ベース001-02.png"
+      },
+      {
+       "file": "skin-007.png",
+       "path": "/pipoya/adult/skin/skin-007.png",
+       "label": "女_ベース001-03",
+       "original": "女_ベース001-03.png"
+      },
+      {
+       "file": "skin-008.png",
+       "path": "/pipoya/adult/skin/skin-008.png",
+       "label": "女_ベース001-04",
+       "original": "女_ベース001-04.png"
+      },
+      {
+       "file": "skin-009.png",
+       "path": "/pipoya/adult/skin/skin-009.png",
+       "label": "女_ベース001-05",
+       "original": "女_ベース001-05.png"
+      },
+      {
+       "file": "skin-010.png",
+       "path": "/pipoya/adult/skin/skin-010.png",
+       "label": "女_ベース001-マネキン",
+       "original": "女_ベース001-マネキン.png"
+      },
+      {
+       "file": "skin-011.png",
+       "path": "/pipoya/adult/skin/skin-011.png",
+       "label": "女_ベース001_髪影なし-01",
+       "original": "女_ベース001_髪影なし-01.png"
+      },
+      {
+       "file": "skin-012.png",
+       "path": "/pipoya/adult/skin/skin-012.png",
+       "label": "女_ベース001_髪影なし-02",
+       "original": "女_ベース001_髪影なし-02.png"
+      },
+      {
+       "file": "skin-013.png",
+       "path": "/pipoya/adult/skin/skin-013.png",
+       "label": "女_ベース001_髪影なし-03",
+       "original": "女_ベース001_髪影なし-03.png"
+      },
+      {
+       "file": "skin-014.png",
+       "path": "/pipoya/adult/skin/skin-014.png",
+       "label": "女_ベース001_髪影なし-04",
+       "original": "女_ベース001_髪影なし-04.png"
+      },
+      {
+       "file": "skin-015.png",
+       "path": "/pipoya/adult/skin/skin-015.png",
+       "label": "女_ベース001_髪影なし-05",
+       "original": "女_ベース001_髪影なし-05.png"
+      },
+      {
+       "file": "skin-016.png",
+       "path": "/pipoya/adult/skin/skin-016.png",
+       "label": "女_ベース001_髪影なし-マネキン",
+       "original": "女_ベース001_髪影なし-マネキン.png"
+      },
+      {
+       "file": "skin-017.png",
+       "path": "/pipoya/adult/skin/skin-017.png",
+       "label": "男_ベース001-01",
+       "original": "男_ベース001-01.png"
+      },
+      {
+       "file": "skin-018.png",
+       "path": "/pipoya/adult/skin/skin-018.png",
+       "label": "男_ベース001-02",
+       "original": "男_ベース001-02.png"
+      },
+      {
+       "file": "skin-019.png",
+       "path": "/pipoya/adult/skin/skin-019.png",
+       "label": "男_ベース001-03",
+       "original": "男_ベース001-03.png"
+      },
+      {
+       "file": "skin-020.png",
+       "path": "/pipoya/adult/skin/skin-020.png",
+       "label": "男_ベース001-04",
+       "original": "男_ベース001-04.png"
+      },
+      {
+       "file": "skin-021.png",
+       "path": "/pipoya/adult/skin/skin-021.png",
+       "label": "男_ベース001-05",
+       "original": "男_ベース001-05.png"
+      },
+      {
+       "file": "skin-022.png",
+       "path": "/pipoya/adult/skin/skin-022.png",
+       "label": "男_ベース001-マネキン",
+       "original": "男_ベース001-マネキン.png"
+      },
+      {
+       "file": "skin-023.png",
+       "path": "/pipoya/adult/skin/skin-023.png",
+       "label": "男_ベース001_髪影なし-01",
+       "original": "男_ベース001_髪影なし-01.png"
+      },
+      {
+       "file": "skin-024.png",
+       "path": "/pipoya/adult/skin/skin-024.png",
+       "label": "男_ベース001_髪影なし-02",
+       "original": "男_ベース001_髪影なし-02.png"
+      },
+      {
+       "file": "skin-025.png",
+       "path": "/pipoya/adult/skin/skin-025.png",
+       "label": "男_ベース001_髪影なし-03",
+       "original": "男_ベース001_髪影なし-03.png"
+      },
+      {
+       "file": "skin-026.png",
+       "path": "/pipoya/adult/skin/skin-026.png",
+       "label": "男_ベース001_髪影なし-04",
+       "original": "男_ベース001_髪影なし-04.png"
+      },
+      {
+       "file": "skin-027.png",
+       "path": "/pipoya/adult/skin/skin-027.png",
+       "label": "男_ベース001_髪影なし-05",
+       "original": "男_ベース001_髪影なし-05.png"
+      },
+      {
+       "file": "skin-028.png",
+       "path": "/pipoya/adult/skin/skin-028.png",
+       "label": "男_ベース001_髪影なし-マネキン",
+       "original": "男_ベース001_髪影なし-マネキン.png"
+      },
+      {
+       "file": "skin-029.png",
+       "path": "/pipoya/adult/skin/skin-029.png",
+       "label": "骸骨_ベース001-01",
+       "original": "骸骨_ベース001-01.png"
+      },
+      {
+       "file": "skin-030.png",
+       "path": "/pipoya/adult/skin/skin-030.png",
+       "label": "骸骨_ベース001-02",
+       "original": "骸骨_ベース001-02.png"
+      },
+      {
+       "file": "skin-031.png",
+       "path": "/pipoya/adult/skin/skin-031.png",
+       "label": "骸骨_ベース001-03",
+       "original": "骸骨_ベース001-03.png"
+      },
+      {
+       "file": "skin-032.png",
+       "path": "/pipoya/adult/skin/skin-032.png",
+       "label": "骸骨_ベース001-04",
+       "original": "骸骨_ベース001-04.png"
+      },
+      {
+       "file": "skin-033.png",
+       "path": "/pipoya/adult/skin/skin-033.png",
+       "label": "骸骨_ベース001-05",
+       "original": "骸骨_ベース001-05.png"
+      }
+     ]
+    },
+    "eyes": {
+     "name": "眼睛",
+     "order": 4,
+     "parts": [
+      {
+       "file": "eyes-001.png",
+       "path": "/pipoya/adult/eyes/eyes-001.png",
+       "label": "共用_目001",
+       "original": "共用_目001.png"
+      },
+      {
+       "file": "eyes-002.png",
+       "path": "/pipoya/adult/eyes/eyes-002.png",
+       "label": "共用_目002",
+       "original": "共用_目002.png"
+      },
+      {
+       "file": "eyes-003.png",
+       "path": "/pipoya/adult/eyes/eyes-003.png",
+       "label": "共用_目003",
+       "original": "共用_目003.png"
+      },
+      {
+       "file": "eyes-004.png",
+       "path": "/pipoya/adult/eyes/eyes-004.png",
+       "label": "共用_目004",
+       "original": "共用_目004.png"
+      },
+      {
+       "file": "eyes-005.png",
+       "path": "/pipoya/adult/eyes/eyes-005.png",
+       "label": "共用_目005",
+       "original": "共用_目005.png"
+      },
+      {
+       "file": "eyes-006.png",
+       "path": "/pipoya/adult/eyes/eyes-006.png",
+       "label": "共用_目006",
+       "original": "共用_目006.png"
+      },
+      {
+       "file": "eyes-007.png",
+       "path": "/pipoya/adult/eyes/eyes-007.png",
+       "label": "共用_目007",
+       "original": "共用_目007.png"
+      },
+      {
+       "file": "eyes-008.png",
+       "path": "/pipoya/adult/eyes/eyes-008.png",
+       "label": "共用_目008",
+       "original": "共用_目008.png"
+      },
+      {
+       "file": "eyes-009.png",
+       "path": "/pipoya/adult/eyes/eyes-009.png",
+       "label": "共用_目009",
+       "original": "共用_目009.png"
+      },
+      {
+       "file": "eyes-010.png",
+       "path": "/pipoya/adult/eyes/eyes-010.png",
+       "label": "共用_目010",
+       "original": "共用_目010.png"
+      },
+      {
+       "file": "eyes-011.png",
+       "path": "/pipoya/adult/eyes/eyes-011.png",
+       "label": "共用_目011",
+       "original": "共用_目011.png"
+      },
+      {
+       "file": "eyes-012.png",
+       "path": "/pipoya/adult/eyes/eyes-012.png",
+       "label": "共用_目012",
+       "original": "共用_目012.png"
+      },
+      {
+       "file": "eyes-013.png",
+       "path": "/pipoya/adult/eyes/eyes-013.png",
+       "label": "共用_目013",
+       "original": "共用_目013.png"
+      },
+      {
+       "file": "eyes-014.png",
+       "path": "/pipoya/adult/eyes/eyes-014.png",
+       "label": "共用_目014",
+       "original": "共用_目014.png"
+      },
+      {
+       "file": "eyes-015.png",
+       "path": "/pipoya/adult/eyes/eyes-015.png",
+       "label": "共用_目015",
+       "original": "共用_目015.png"
+      },
+      {
+       "file": "eyes-016.png",
+       "path": "/pipoya/adult/eyes/eyes-016.png",
+       "label": "女_目001",
+       "original": "女_目001.png"
+      },
+      {
+       "file": "eyes-017.png",
+       "path": "/pipoya/adult/eyes/eyes-017.png",
+       "label": "女_目002",
+       "original": "女_目002.png"
+      },
+      {
+       "file": "eyes-018.png",
+       "path": "/pipoya/adult/eyes/eyes-018.png",
+       "label": "女_目003",
+       "original": "女_目003.png"
+      },
+      {
+       "file": "eyes-019.png",
+       "path": "/pipoya/adult/eyes/eyes-019.png",
+       "label": "女_目004",
+       "original": "女_目004.png"
+      },
+      {
+       "file": "eyes-020.png",
+       "path": "/pipoya/adult/eyes/eyes-020.png",
+       "label": "女_目005",
+       "original": "女_目005.png"
+      },
+      {
+       "file": "eyes-021.png",
+       "path": "/pipoya/adult/eyes/eyes-021.png",
+       "label": "女_目006",
+       "original": "女_目006.png"
+      },
+      {
+       "file": "eyes-022.png",
+       "path": "/pipoya/adult/eyes/eyes-022.png",
+       "label": "女_目007",
+       "original": "女_目007.png"
+      },
+      {
+       "file": "eyes-023.png",
+       "path": "/pipoya/adult/eyes/eyes-023.png",
+       "label": "女_目008",
+       "original": "女_目008.png"
+      },
+      {
+       "file": "eyes-024.png",
+       "path": "/pipoya/adult/eyes/eyes-024.png",
+       "label": "女_目009",
+       "original": "女_目009.png"
+      },
+      {
+       "file": "eyes-025.png",
+       "path": "/pipoya/adult/eyes/eyes-025.png",
+       "label": "女_目010",
+       "original": "女_目010.png"
+      },
+      {
+       "file": "eyes-026.png",
+       "path": "/pipoya/adult/eyes/eyes-026.png",
+       "label": "男_目001",
+       "original": "男_目001.png"
+      },
+      {
+       "file": "eyes-027.png",
+       "path": "/pipoya/adult/eyes/eyes-027.png",
+       "label": "男_目002",
+       "original": "男_目002.png"
+      },
+      {
+       "file": "eyes-028.png",
+       "path": "/pipoya/adult/eyes/eyes-028.png",
+       "label": "男_目003",
+       "original": "男_目003.png"
+      },
+      {
+       "file": "eyes-029.png",
+       "path": "/pipoya/adult/eyes/eyes-029.png",
+       "label": "男_目004",
+       "original": "男_目004.png"
+      },
+      {
+       "file": "eyes-030.png",
+       "path": "/pipoya/adult/eyes/eyes-030.png",
+       "label": "男_目005",
+       "original": "男_目005.png"
+      },
+      {
+       "file": "eyes-031.png",
+       "path": "/pipoya/adult/eyes/eyes-031.png",
+       "label": "男_目006",
+       "original": "男_目006.png"
+      },
+      {
+       "file": "eyes-032.png",
+       "path": "/pipoya/adult/eyes/eyes-032.png",
+       "label": "男_目007",
+       "original": "男_目007.png"
+      },
+      {
+       "file": "eyes-033.png",
+       "path": "/pipoya/adult/eyes/eyes-033.png",
+       "label": "男_目008",
+       "original": "男_目008.png"
+      },
+      {
+       "file": "eyes-034.png",
+       "path": "/pipoya/adult/eyes/eyes-034.png",
+       "label": "男_目009",
+       "original": "男_目009.png"
+      },
+      {
+       "file": "eyes-035.png",
+       "path": "/pipoya/adult/eyes/eyes-035.png",
+       "label": "男_目010",
+       "original": "男_目010.png"
+      }
+     ]
+    },
+    "hair": {
+     "name": "发型",
+     "order": 11,
+     "parts": [
+      {
+       "file": "hair-001.png",
+       "path": "/pipoya/adult/hair/hair-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-002.png",
+       "path": "/pipoya/adult/hair/hair-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-003.png",
+       "path": "/pipoya/adult/hair/hair-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-004.png",
+       "path": "/pipoya/adult/hair/hair-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-005.png",
+       "path": "/pipoya/adult/hair/hair-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-006.png",
+       "path": "/pipoya/adult/hair/hair-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-007.png",
+       "path": "/pipoya/adult/hair/hair-007.png",
+       "label": "女_髪004-01",
+       "original": "女_髪004-01.png"
+      },
+      {
+       "file": "hair-008.png",
+       "path": "/pipoya/adult/hair/hair-008.png",
+       "label": "女_髪004-02",
+       "original": "女_髪004-02.png"
+      },
+      {
+       "file": "hair-009.png",
+       "path": "/pipoya/adult/hair/hair-009.png",
+       "label": "女_髪005-01",
+       "original": "女_髪005-01.png"
+      },
+      {
+       "file": "hair-010.png",
+       "path": "/pipoya/adult/hair/hair-010.png",
+       "label": "女_髪005-02",
+       "original": "女_髪005-02.png"
+      },
+      {
+       "file": "hair-011.png",
+       "path": "/pipoya/adult/hair/hair-011.png",
+       "label": "女_髪006-01",
+       "original": "女_髪006-01.png"
+      },
+      {
+       "file": "hair-012.png",
+       "path": "/pipoya/adult/hair/hair-012.png",
+       "label": "女_髪006-02",
+       "original": "女_髪006-02.png"
+      },
+      {
+       "file": "hair-013.png",
+       "path": "/pipoya/adult/hair/hair-013.png",
+       "label": "女_髪007-01",
+       "original": "女_髪007-01.png"
+      },
+      {
+       "file": "hair-014.png",
+       "path": "/pipoya/adult/hair/hair-014.png",
+       "label": "女_髪007-02",
+       "original": "女_髪007-02.png"
+      },
+      {
+       "file": "hair-015.png",
+       "path": "/pipoya/adult/hair/hair-015.png",
+       "label": "女_髪008-01",
+       "original": "女_髪008-01.png"
+      },
+      {
+       "file": "hair-016.png",
+       "path": "/pipoya/adult/hair/hair-016.png",
+       "label": "女_髪008-02",
+       "original": "女_髪008-02.png"
+      },
+      {
+       "file": "hair-017.png",
+       "path": "/pipoya/adult/hair/hair-017.png",
+       "label": "女_髪009-01",
+       "original": "女_髪009-01.png"
+      },
+      {
+       "file": "hair-018.png",
+       "path": "/pipoya/adult/hair/hair-018.png",
+       "label": "女_髪009-02",
+       "original": "女_髪009-02.png"
+      },
+      {
+       "file": "hair-019.png",
+       "path": "/pipoya/adult/hair/hair-019.png",
+       "label": "女_髪010-01",
+       "original": "女_髪010-01.png"
+      },
+      {
+       "file": "hair-020.png",
+       "path": "/pipoya/adult/hair/hair-020.png",
+       "label": "女_髪010-02",
+       "original": "女_髪010-02.png"
+      },
+      {
+       "file": "hair-021.png",
+       "path": "/pipoya/adult/hair/hair-021.png",
+       "label": "女_髪011-01",
+       "original": "女_髪011-01.png"
+      },
+      {
+       "file": "hair-022.png",
+       "path": "/pipoya/adult/hair/hair-022.png",
+       "label": "女_髪011-02",
+       "original": "女_髪011-02.png"
+      },
+      {
+       "file": "hair-023.png",
+       "path": "/pipoya/adult/hair/hair-023.png",
+       "label": "女_髪012-01",
+       "original": "女_髪012-01.png"
+      },
+      {
+       "file": "hair-024.png",
+       "path": "/pipoya/adult/hair/hair-024.png",
+       "label": "女_髪012-02",
+       "original": "女_髪012-02.png"
+      },
+      {
+       "file": "hair-025.png",
+       "path": "/pipoya/adult/hair/hair-025.png",
+       "label": "女_髪013-01",
+       "original": "女_髪013-01.png"
+      },
+      {
+       "file": "hair-026.png",
+       "path": "/pipoya/adult/hair/hair-026.png",
+       "label": "女_髪013-02",
+       "original": "女_髪013-02.png"
+      },
+      {
+       "file": "hair-027.png",
+       "path": "/pipoya/adult/hair/hair-027.png",
+       "label": "女_髪014-01",
+       "original": "女_髪014-01.png"
+      },
+      {
+       "file": "hair-028.png",
+       "path": "/pipoya/adult/hair/hair-028.png",
+       "label": "女_髪014-02",
+       "original": "女_髪014-02.png"
+      },
+      {
+       "file": "hair-029.png",
+       "path": "/pipoya/adult/hair/hair-029.png",
+       "label": "女_髪015-01",
+       "original": "女_髪015-01.png"
+      },
+      {
+       "file": "hair-030.png",
+       "path": "/pipoya/adult/hair/hair-030.png",
+       "label": "女_髪015-02",
+       "original": "女_髪015-02.png"
+      },
+      {
+       "file": "hair-031.png",
+       "path": "/pipoya/adult/hair/hair-031.png",
+       "label": "女_髪016-01",
+       "original": "女_髪016-01.png"
+      },
+      {
+       "file": "hair-032.png",
+       "path": "/pipoya/adult/hair/hair-032.png",
+       "label": "女_髪016-02",
+       "original": "女_髪016-02.png"
+      },
+      {
+       "file": "hair-033.png",
+       "path": "/pipoya/adult/hair/hair-033.png",
+       "label": "女_髪017-01",
+       "original": "女_髪017-01.png"
+      },
+      {
+       "file": "hair-034.png",
+       "path": "/pipoya/adult/hair/hair-034.png",
+       "label": "女_髪017-02",
+       "original": "女_髪017-02.png"
+      },
+      {
+       "file": "hair-035.png",
+       "path": "/pipoya/adult/hair/hair-035.png",
+       "label": "女_髪018-01",
+       "original": "女_髪018-01.png"
+      },
+      {
+       "file": "hair-036.png",
+       "path": "/pipoya/adult/hair/hair-036.png",
+       "label": "女_髪018-02",
+       "original": "女_髪018-02.png"
+      },
+      {
+       "file": "hair-037.png",
+       "path": "/pipoya/adult/hair/hair-037.png",
+       "label": "女_髪019-01",
+       "original": "女_髪019-01.png"
+      },
+      {
+       "file": "hair-038.png",
+       "path": "/pipoya/adult/hair/hair-038.png",
+       "label": "女_髪019-02",
+       "original": "女_髪019-02.png"
+      },
+      {
+       "file": "hair-039.png",
+       "path": "/pipoya/adult/hair/hair-039.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-040.png",
+       "path": "/pipoya/adult/hair/hair-040.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-041.png",
+       "path": "/pipoya/adult/hair/hair-041.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-042.png",
+       "path": "/pipoya/adult/hair/hair-042.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-043.png",
+       "path": "/pipoya/adult/hair/hair-043.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-044.png",
+       "path": "/pipoya/adult/hair/hair-044.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      },
+      {
+       "file": "hair-045.png",
+       "path": "/pipoya/adult/hair/hair-045.png",
+       "label": "男_髪004-01",
+       "original": "男_髪004-01.png"
+      },
+      {
+       "file": "hair-046.png",
+       "path": "/pipoya/adult/hair/hair-046.png",
+       "label": "男_髪004-02",
+       "original": "男_髪004-02.png"
+      },
+      {
+       "file": "hair-047.png",
+       "path": "/pipoya/adult/hair/hair-047.png",
+       "label": "男_髪005-01",
+       "original": "男_髪005-01.png"
+      },
+      {
+       "file": "hair-048.png",
+       "path": "/pipoya/adult/hair/hair-048.png",
+       "label": "男_髪005-02",
+       "original": "男_髪005-02.png"
+      },
+      {
+       "file": "hair-049.png",
+       "path": "/pipoya/adult/hair/hair-049.png",
+       "label": "男_髪005_鉢巻付-01",
+       "original": "男_髪005_鉢巻付-01.png"
+      },
+      {
+       "file": "hair-050.png",
+       "path": "/pipoya/adult/hair/hair-050.png",
+       "label": "男_髪005_鉢巻付-02",
+       "original": "男_髪005_鉢巻付-02.png"
+      },
+      {
+       "file": "hair-051.png",
+       "path": "/pipoya/adult/hair/hair-051.png",
+       "label": "男_髪006-01",
+       "original": "男_髪006-01.png"
+      },
+      {
+       "file": "hair-052.png",
+       "path": "/pipoya/adult/hair/hair-052.png",
+       "label": "男_髪006-02",
+       "original": "男_髪006-02.png"
+      },
+      {
+       "file": "hair-053.png",
+       "path": "/pipoya/adult/hair/hair-053.png",
+       "label": "男_髪007-01",
+       "original": "男_髪007-01.png"
+      },
+      {
+       "file": "hair-054.png",
+       "path": "/pipoya/adult/hair/hair-054.png",
+       "label": "男_髪007-02",
+       "original": "男_髪007-02.png"
+      },
+      {
+       "file": "hair-055.png",
+       "path": "/pipoya/adult/hair/hair-055.png",
+       "label": "男_髪008-01",
+       "original": "男_髪008-01.png"
+      },
+      {
+       "file": "hair-056.png",
+       "path": "/pipoya/adult/hair/hair-056.png",
+       "label": "男_髪008-02",
+       "original": "男_髪008-02.png"
+      },
+      {
+       "file": "hair-057.png",
+       "path": "/pipoya/adult/hair/hair-057.png",
+       "label": "男_髪009-01",
+       "original": "男_髪009-01.png"
+      },
+      {
+       "file": "hair-058.png",
+       "path": "/pipoya/adult/hair/hair-058.png",
+       "label": "男_髪009-02",
+       "original": "男_髪009-02.png"
+      },
+      {
+       "file": "hair-059.png",
+       "path": "/pipoya/adult/hair/hair-059.png",
+       "label": "男_髪010-01",
+       "original": "男_髪010-01.png"
+      },
+      {
+       "file": "hair-060.png",
+       "path": "/pipoya/adult/hair/hair-060.png",
+       "label": "男_髪010-02",
+       "original": "男_髪010-02.png"
+      },
+      {
+       "file": "hair-061.png",
+       "path": "/pipoya/adult/hair/hair-061.png",
+       "label": "男_髪011-01",
+       "original": "男_髪011-01.png"
+      },
+      {
+       "file": "hair-062.png",
+       "path": "/pipoya/adult/hair/hair-062.png",
+       "label": "男_髪011-02",
+       "original": "男_髪011-02.png"
+      },
+      {
+       "file": "hair-063.png",
+       "path": "/pipoya/adult/hair/hair-063.png",
+       "label": "男_髪012-01",
+       "original": "男_髪012-01.png"
+      },
+      {
+       "file": "hair-064.png",
+       "path": "/pipoya/adult/hair/hair-064.png",
+       "label": "男_髪012-02",
+       "original": "男_髪012-02.png"
+      },
+      {
+       "file": "hair-065.png",
+       "path": "/pipoya/adult/hair/hair-065.png",
+       "label": "男_髪013-01",
+       "original": "男_髪013-01.png"
+      },
+      {
+       "file": "hair-066.png",
+       "path": "/pipoya/adult/hair/hair-066.png",
+       "label": "男_髪013-02",
+       "original": "男_髪013-02.png"
+      },
+      {
+       "file": "hair-067.png",
+       "path": "/pipoya/adult/hair/hair-067.png",
+       "label": "男_髪014-01",
+       "original": "男_髪014-01.png"
+      },
+      {
+       "file": "hair-068.png",
+       "path": "/pipoya/adult/hair/hair-068.png",
+       "label": "男_髪014-02",
+       "original": "男_髪014-02.png"
+      }
+     ]
+    },
+    "hair-hat": {
+     "name": "发型(帽用)",
+     "order": 12,
+     "parts": [
+      {
+       "file": "hair-hat-001.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-002.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-003.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-004.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-005.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-006.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-hat-007.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-007.png",
+       "label": "女_髪004-01",
+       "original": "女_髪004-01.png"
+      },
+      {
+       "file": "hair-hat-008.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-008.png",
+       "label": "女_髪004-02",
+       "original": "女_髪004-02.png"
+      },
+      {
+       "file": "hair-hat-009.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-009.png",
+       "label": "女_髪005-01",
+       "original": "女_髪005-01.png"
+      },
+      {
+       "file": "hair-hat-010.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-010.png",
+       "label": "女_髪005-02",
+       "original": "女_髪005-02.png"
+      },
+      {
+       "file": "hair-hat-011.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-011.png",
+       "label": "女_髪006-01",
+       "original": "女_髪006-01.png"
+      },
+      {
+       "file": "hair-hat-012.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-012.png",
+       "label": "女_髪006-02",
+       "original": "女_髪006-02.png"
+      },
+      {
+       "file": "hair-hat-013.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-013.png",
+       "label": "女_髪007-01",
+       "original": "女_髪007-01.png"
+      },
+      {
+       "file": "hair-hat-014.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-014.png",
+       "label": "女_髪007-02",
+       "original": "女_髪007-02.png"
+      },
+      {
+       "file": "hair-hat-015.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-015.png",
+       "label": "女_髪008-01",
+       "original": "女_髪008-01.png"
+      },
+      {
+       "file": "hair-hat-016.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-016.png",
+       "label": "女_髪008-02",
+       "original": "女_髪008-02.png"
+      },
+      {
+       "file": "hair-hat-017.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-017.png",
+       "label": "女_髪009-01",
+       "original": "女_髪009-01.png"
+      },
+      {
+       "file": "hair-hat-018.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-018.png",
+       "label": "女_髪009-02",
+       "original": "女_髪009-02.png"
+      },
+      {
+       "file": "hair-hat-019.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-019.png",
+       "label": "女_髪010-01",
+       "original": "女_髪010-01.png"
+      },
+      {
+       "file": "hair-hat-020.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-020.png",
+       "label": "女_髪010-02",
+       "original": "女_髪010-02.png"
+      },
+      {
+       "file": "hair-hat-021.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-021.png",
+       "label": "女_髪011-01",
+       "original": "女_髪011-01.png"
+      },
+      {
+       "file": "hair-hat-022.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-022.png",
+       "label": "女_髪011-02",
+       "original": "女_髪011-02.png"
+      },
+      {
+       "file": "hair-hat-023.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-023.png",
+       "label": "女_髪012-01",
+       "original": "女_髪012-01.png"
+      },
+      {
+       "file": "hair-hat-024.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-024.png",
+       "label": "女_髪012-02",
+       "original": "女_髪012-02.png"
+      },
+      {
+       "file": "hair-hat-025.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-025.png",
+       "label": "女_髪013-01",
+       "original": "女_髪013-01.png"
+      },
+      {
+       "file": "hair-hat-026.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-026.png",
+       "label": "女_髪013-02",
+       "original": "女_髪013-02.png"
+      },
+      {
+       "file": "hair-hat-027.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-027.png",
+       "label": "女_髪014-01",
+       "original": "女_髪014-01.png"
+      },
+      {
+       "file": "hair-hat-028.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-028.png",
+       "label": "女_髪014-02",
+       "original": "女_髪014-02.png"
+      },
+      {
+       "file": "hair-hat-029.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-029.png",
+       "label": "女_髪015-01",
+       "original": "女_髪015-01.png"
+      },
+      {
+       "file": "hair-hat-030.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-030.png",
+       "label": "女_髪015-02",
+       "original": "女_髪015-02.png"
+      },
+      {
+       "file": "hair-hat-031.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-031.png",
+       "label": "女_髪016-01",
+       "original": "女_髪016-01.png"
+      },
+      {
+       "file": "hair-hat-032.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-032.png",
+       "label": "女_髪016-02",
+       "original": "女_髪016-02.png"
+      },
+      {
+       "file": "hair-hat-033.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-033.png",
+       "label": "女_髪017-01",
+       "original": "女_髪017-01.png"
+      },
+      {
+       "file": "hair-hat-034.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-034.png",
+       "label": "女_髪017-02",
+       "original": "女_髪017-02.png"
+      },
+      {
+       "file": "hair-hat-035.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-035.png",
+       "label": "女_髪018-01",
+       "original": "女_髪018-01.png"
+      },
+      {
+       "file": "hair-hat-036.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-036.png",
+       "label": "女_髪018-02",
+       "original": "女_髪018-02.png"
+      },
+      {
+       "file": "hair-hat-037.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-037.png",
+       "label": "女_髪019-01",
+       "original": "女_髪019-01.png"
+      },
+      {
+       "file": "hair-hat-038.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-038.png",
+       "label": "女_髪019-02",
+       "original": "女_髪019-02.png"
+      },
+      {
+       "file": "hair-hat-039.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-039.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-040.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-040.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-041.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-041.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-042.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-042.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-043.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-043.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-044.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-044.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      },
+      {
+       "file": "hair-hat-045.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-045.png",
+       "label": "男_髪004-01",
+       "original": "男_髪004-01.png"
+      },
+      {
+       "file": "hair-hat-046.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-046.png",
+       "label": "男_髪004-02",
+       "original": "男_髪004-02.png"
+      },
+      {
+       "file": "hair-hat-047.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-047.png",
+       "label": "男_髪005-01",
+       "original": "男_髪005-01.png"
+      },
+      {
+       "file": "hair-hat-048.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-048.png",
+       "label": "男_髪005-02",
+       "original": "男_髪005-02.png"
+      },
+      {
+       "file": "hair-hat-049.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-049.png",
+       "label": "男_髪005_鉢巻付-01",
+       "original": "男_髪005_鉢巻付-01.png"
+      },
+      {
+       "file": "hair-hat-050.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-050.png",
+       "label": "男_髪005_鉢巻付-02",
+       "original": "男_髪005_鉢巻付-02.png"
+      },
+      {
+       "file": "hair-hat-051.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-051.png",
+       "label": "男_髪006-01",
+       "original": "男_髪006-01.png"
+      },
+      {
+       "file": "hair-hat-052.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-052.png",
+       "label": "男_髪006-02",
+       "original": "男_髪006-02.png"
+      },
+      {
+       "file": "hair-hat-053.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-053.png",
+       "label": "男_髪007-01",
+       "original": "男_髪007-01.png"
+      },
+      {
+       "file": "hair-hat-054.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-054.png",
+       "label": "男_髪007-02",
+       "original": "男_髪007-02.png"
+      },
+      {
+       "file": "hair-hat-055.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-055.png",
+       "label": "男_髪008-01",
+       "original": "男_髪008-01.png"
+      },
+      {
+       "file": "hair-hat-056.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-056.png",
+       "label": "男_髪008-02",
+       "original": "男_髪008-02.png"
+      },
+      {
+       "file": "hair-hat-057.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-057.png",
+       "label": "男_髪009-01",
+       "original": "男_髪009-01.png"
+      },
+      {
+       "file": "hair-hat-058.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-058.png",
+       "label": "男_髪009-02",
+       "original": "男_髪009-02.png"
+      },
+      {
+       "file": "hair-hat-059.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-059.png",
+       "label": "男_髪010-01",
+       "original": "男_髪010-01.png"
+      },
+      {
+       "file": "hair-hat-060.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-060.png",
+       "label": "男_髪010-02",
+       "original": "男_髪010-02.png"
+      },
+      {
+       "file": "hair-hat-061.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-061.png",
+       "label": "男_髪011-01",
+       "original": "男_髪011-01.png"
+      },
+      {
+       "file": "hair-hat-062.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-062.png",
+       "label": "男_髪011-02",
+       "original": "男_髪011-02.png"
+      },
+      {
+       "file": "hair-hat-063.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-063.png",
+       "label": "男_髪012-01",
+       "original": "男_髪012-01.png"
+      },
+      {
+       "file": "hair-hat-064.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-064.png",
+       "label": "男_髪012-02",
+       "original": "男_髪012-02.png"
+      },
+      {
+       "file": "hair-hat-065.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-065.png",
+       "label": "男_髪013-01",
+       "original": "男_髪013-01.png"
+      },
+      {
+       "file": "hair-hat-066.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-066.png",
+       "label": "男_髪013-02",
+       "original": "男_髪013-02.png"
+      },
+      {
+       "file": "hair-hat-067.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-067.png",
+       "label": "男_髪014-01",
+       "original": "男_髪014-01.png"
+      },
+      {
+       "file": "hair-hat-068.png",
+       "path": "/pipoya/adult/hair-hat/hair-hat-068.png",
+       "label": "男_髪014-02",
+       "original": "男_髪014-02.png"
+      }
+     ]
+    },
+    "item-effect": {
+     "name": "武器特效",
+     "order": 1,
+     "parts": [
+      {
+       "file": "item-effect-001.png",
+       "path": "/pipoya/adult/item-effect/item-effect-001.png",
+       "label": "ナイフ001-01",
+       "original": "ナイフ001-01.png"
+      },
+      {
+       "file": "item-effect-002.png",
+       "path": "/pipoya/adult/item-effect/item-effect-002.png",
+       "label": "ナイフ001-02",
+       "original": "ナイフ001-02.png"
+      },
+      {
+       "file": "item-effect-003.png",
+       "path": "/pipoya/adult/item-effect/item-effect-003.png",
+       "label": "ナイフ002-01",
+       "original": "ナイフ002-01.png"
+      },
+      {
+       "file": "item-effect-004.png",
+       "path": "/pipoya/adult/item-effect/item-effect-004.png",
+       "label": "ナイフ002-02",
+       "original": "ナイフ002-02.png"
+      },
+      {
+       "file": "item-effect-005.png",
+       "path": "/pipoya/adult/item-effect/item-effect-005.png",
+       "label": "ロッド001-01",
+       "original": "ロッド001-01.png"
+      },
+      {
+       "file": "item-effect-006.png",
+       "path": "/pipoya/adult/item-effect/item-effect-006.png",
+       "label": "ロッド001-02",
+       "original": "ロッド001-02.png"
+      },
+      {
+       "file": "item-effect-007.png",
+       "path": "/pipoya/adult/item-effect/item-effect-007.png",
+       "label": "ロッド001-03",
+       "original": "ロッド001-03.png"
+      },
+      {
+       "file": "item-effect-008.png",
+       "path": "/pipoya/adult/item-effect/item-effect-008.png",
+       "label": "ロッド001-04",
+       "original": "ロッド001-04.png"
+      },
+      {
+       "file": "item-effect-009.png",
+       "path": "/pipoya/adult/item-effect/item-effect-009.png",
+       "label": "剣だけ001-01",
+       "original": "剣だけ001-01.png"
+      },
+      {
+       "file": "item-effect-010.png",
+       "path": "/pipoya/adult/item-effect/item-effect-010.png",
+       "label": "剣だけ001-02",
+       "original": "剣だけ001-02.png"
+      },
+      {
+       "file": "item-effect-011.png",
+       "path": "/pipoya/adult/item-effect/item-effect-011.png",
+       "label": "剣だけ001-03",
+       "original": "剣だけ001-03.png"
+      },
+      {
+       "file": "item-effect-012.png",
+       "path": "/pipoya/adult/item-effect/item-effect-012.png",
+       "label": "剣だけ001-04",
+       "original": "剣だけ001-04.png"
+      },
+      {
+       "file": "item-effect-013.png",
+       "path": "/pipoya/adult/item-effect/item-effect-013.png",
+       "label": "剣と剣001-01",
+       "original": "剣と剣001-01.png"
+      },
+      {
+       "file": "item-effect-014.png",
+       "path": "/pipoya/adult/item-effect/item-effect-014.png",
+       "label": "剣と剣001-02",
+       "original": "剣と剣001-02.png"
+      },
+      {
+       "file": "item-effect-015.png",
+       "path": "/pipoya/adult/item-effect/item-effect-015.png",
+       "label": "剣と盾001-01",
+       "original": "剣と盾001-01.png"
+      },
+      {
+       "file": "item-effect-016.png",
+       "path": "/pipoya/adult/item-effect/item-effect-016.png",
+       "label": "剣と盾001-02",
+       "original": "剣と盾001-02.png"
+      },
+      {
+       "file": "item-effect-017.png",
+       "path": "/pipoya/adult/item-effect/item-effect-017.png",
+       "label": "剣と盾001-03",
+       "original": "剣と盾001-03.png"
+      },
+      {
+       "file": "item-effect-018.png",
+       "path": "/pipoya/adult/item-effect/item-effect-018.png",
+       "label": "剣と盾001-04",
+       "original": "剣と盾001-04.png"
+      },
+      {
+       "file": "item-effect-019.png",
+       "path": "/pipoya/adult/item-effect/item-effect-019.png",
+       "label": "弓001-01",
+       "original": "弓001-01.png"
+      },
+      {
+       "file": "item-effect-020.png",
+       "path": "/pipoya/adult/item-effect/item-effect-020.png",
+       "label": "弓001-02",
+       "original": "弓001-02.png"
+      },
+      {
+       "file": "item-effect-021.png",
+       "path": "/pipoya/adult/item-effect/item-effect-021.png",
+       "label": "拳銃001-01",
+       "original": "拳銃001-01.png"
+      },
+      {
+       "file": "item-effect-022.png",
+       "path": "/pipoya/adult/item-effect/item-effect-022.png",
+       "label": "拳銃001-02",
+       "original": "拳銃001-02.png"
+      },
+      {
+       "file": "item-effect-023.png",
+       "path": "/pipoya/adult/item-effect/item-effect-023.png",
+       "label": "拳銃001-03",
+       "original": "拳銃001-03.png"
+      },
+      {
+       "file": "item-effect-024.png",
+       "path": "/pipoya/adult/item-effect/item-effect-024.png",
+       "label": "斧001-01",
+       "original": "斧001-01.png"
+      },
+      {
+       "file": "item-effect-025.png",
+       "path": "/pipoya/adult/item-effect/item-effect-025.png",
+       "label": "斧001-02",
+       "original": "斧001-02.png"
+      },
+      {
+       "file": "item-effect-026.png",
+       "path": "/pipoya/adult/item-effect/item-effect-026.png",
+       "label": "槍001-01",
+       "original": "槍001-01.png"
+      },
+      {
+       "file": "item-effect-027.png",
+       "path": "/pipoya/adult/item-effect/item-effect-027.png",
+       "label": "槍001-02",
+       "original": "槍001-02.png"
+      },
+      {
+       "file": "item-effect-028.png",
+       "path": "/pipoya/adult/item-effect/item-effect-028.png",
+       "label": "盾だけ001-01",
+       "original": "盾だけ001-01.png"
+      },
+      {
+       "file": "item-effect-029.png",
+       "path": "/pipoya/adult/item-effect/item-effect-029.png",
+       "label": "盾だけ001-02",
+       "original": "盾だけ001-02.png"
+      },
+      {
+       "file": "item-effect-030.png",
+       "path": "/pipoya/adult/item-effect/item-effect-030.png",
+       "label": "盾だけ001-03",
+       "original": "盾だけ001-03.png"
+      },
+      {
+       "file": "item-effect-031.png",
+       "path": "/pipoya/adult/item-effect/item-effect-031.png",
+       "label": "盾だけ001-04",
+       "original": "盾だけ001-04.png"
+      }
+     ]
+    },
+    "beard": {
+     "name": "胡须",
+     "order": 8,
+     "parts": [
+      {
+       "file": "beard-001.png",
+       "path": "/pipoya/adult/beard/beard-001.png",
+       "label": "ヒゲ001-01",
+       "original": "ヒゲ001-01.png"
+      },
+      {
+       "file": "beard-002.png",
+       "path": "/pipoya/adult/beard/beard-002.png",
+       "label": "ヒゲ001-02",
+       "original": "ヒゲ001-02.png"
+      },
+      {
+       "file": "beard-003.png",
+       "path": "/pipoya/adult/beard/beard-003.png",
+       "label": "ヒゲ002-01",
+       "original": "ヒゲ002-01.png"
+      },
+      {
+       "file": "beard-004.png",
+       "path": "/pipoya/adult/beard/beard-004.png",
+       "label": "ヒゲ002-02",
+       "original": "ヒゲ002-02.png"
+      },
+      {
+       "file": "beard-005.png",
+       "path": "/pipoya/adult/beard/beard-005.png",
+       "label": "ヒゲ003-01",
+       "original": "ヒゲ003-01.png"
+      },
+      {
+       "file": "beard-006.png",
+       "path": "/pipoya/adult/beard/beard-006.png",
+       "label": "ヒゲ003-02",
+       "original": "ヒゲ003-02.png"
+      },
+      {
+       "file": "beard-007.png",
+       "path": "/pipoya/adult/beard/beard-007.png",
+       "label": "ヒゲ004-01",
+       "original": "ヒゲ004-01.png"
+      },
+      {
+       "file": "beard-008.png",
+       "path": "/pipoya/adult/beard/beard-008.png",
+       "label": "ヒゲ004-02",
+       "original": "ヒゲ004-02.png"
+      }
+     ]
+    },
+    "cloak": {
+     "name": "披风",
+     "order": 7,
+     "parts": [
+      {
+       "file": "cloak-001.png",
+       "path": "/pipoya/adult/cloak/cloak-001.png",
+       "label": "マント001",
+       "original": "マント001.png"
+      },
+      {
+       "file": "cloak-002.png",
+       "path": "/pipoya/adult/cloak/cloak-002.png",
+       "label": "マント002",
+       "original": "マント002.png"
+      },
+      {
+       "file": "cloak-003.png",
+       "path": "/pipoya/adult/cloak/cloak-003.png",
+       "label": "マント003",
+       "original": "マント003.png"
+      },
+      {
+       "file": "cloak-004.png",
+       "path": "/pipoya/adult/cloak/cloak-004.png",
+       "label": "マント004",
+       "original": "マント004.png"
+      },
+      {
+       "file": "cloak-005.png",
+       "path": "/pipoya/adult/cloak/cloak-005.png",
+       "label": "マント005",
+       "original": "マント005.png"
+      },
+      {
+       "file": "cloak-006.png",
+       "path": "/pipoya/adult/cloak/cloak-006.png",
+       "label": "マント006_マフラー",
+       "original": "マント006_マフラー.png"
+      },
+      {
+       "file": "cloak-007.png",
+       "path": "/pipoya/adult/cloak/cloak-007.png",
+       "label": "マント007_スカーフ",
+       "original": "マント007_スカーフ.png"
+      },
+      {
+       "file": "cloak-008.png",
+       "path": "/pipoya/adult/cloak/cloak-008.png",
+       "label": "マント008_白衣",
+       "original": "マント008_白衣.png"
+      },
+      {
+       "file": "cloak-009.png",
+       "path": "/pipoya/adult/cloak/cloak-009.png",
+       "label": "尻尾001_うさ",
+       "original": "尻尾001_うさ.png"
+      },
+      {
+       "file": "cloak-010.png",
+       "path": "/pipoya/adult/cloak/cloak-010.png",
+       "label": "尻尾002_猫",
+       "original": "尻尾002_猫.png"
+      },
+      {
+       "file": "cloak-011.png",
+       "path": "/pipoya/adult/cloak/cloak-011.png",
+       "label": "尻尾003_犬",
+       "original": "尻尾003_犬.png"
+      },
+      {
+       "file": "cloak-012.png",
+       "path": "/pipoya/adult/cloak/cloak-012.png",
+       "label": "尻尾004_くま",
+       "original": "尻尾004_くま.png"
+      }
+     ]
+    },
+    "makeup": {
+     "name": "妆容",
+     "order": 3,
+     "parts": [
+      {
+       "file": "makeup-001.png",
+       "path": "/pipoya/adult/makeup/makeup-001.png",
+       "label": "メイク001_眉毛-01",
+       "original": "メイク001_眉毛-01.png"
+      },
+      {
+       "file": "makeup-002.png",
+       "path": "/pipoya/adult/makeup/makeup-002.png",
+       "label": "メイク001_眉毛-02",
+       "original": "メイク001_眉毛-02.png"
+      },
+      {
+       "file": "makeup-003.png",
+       "path": "/pipoya/adult/makeup/makeup-003.png",
+       "label": "メイク002_傷",
+       "original": "メイク002_傷.png"
+      },
+      {
+       "file": "makeup-004.png",
+       "path": "/pipoya/adult/makeup/makeup-004.png",
+       "label": "メイク003_頬紅",
+       "original": "メイク003_頬紅.png"
+      }
+     ]
+    },
+    "glasses": {
+     "name": "眼镜",
+     "order": 9,
+     "parts": [
+      {
+       "file": "glasses-001.png",
+       "path": "/pipoya/adult/glasses/glasses-001.png",
+       "label": "メガネ001-01",
+       "original": "メガネ001-01.png"
+      },
+      {
+       "file": "glasses-002.png",
+       "path": "/pipoya/adult/glasses/glasses-002.png",
+       "label": "メガネ001-02",
+       "original": "メガネ001-02.png"
+      },
+      {
+       "file": "glasses-003.png",
+       "path": "/pipoya/adult/glasses/glasses-003.png",
+       "label": "メガネ002-01",
+       "original": "メガネ002-01.png"
+      },
+      {
+       "file": "glasses-004.png",
+       "path": "/pipoya/adult/glasses/glasses-004.png",
+       "label": "メガネ002-02",
+       "original": "メガネ002-02.png"
+      },
+      {
+       "file": "glasses-005.png",
+       "path": "/pipoya/adult/glasses/glasses-005.png",
+       "label": "メガネ003-01",
+       "original": "メガネ003-01.png"
+      },
+      {
+       "file": "glasses-006.png",
+       "path": "/pipoya/adult/glasses/glasses-006.png",
+       "label": "メガネ004-01",
+       "original": "メガネ004-01.png"
+      },
+      {
+       "file": "glasses-007.png",
+       "path": "/pipoya/adult/glasses/glasses-007.png",
+       "label": "メガネ005-01",
+       "original": "メガネ005-01.png"
+      },
+      {
+       "file": "glasses-008.png",
+       "path": "/pipoya/adult/glasses/glasses-008.png",
+       "label": "メガネ006-01",
+       "original": "メガネ006-01.png"
+      },
+      {
+       "file": "glasses-009.png",
+       "path": "/pipoya/adult/glasses/glasses-009.png",
+       "label": "メガネ007-01",
+       "original": "メガネ007-01.png"
+      },
+      {
+       "file": "glasses-010.png",
+       "path": "/pipoya/adult/glasses/glasses-010.png",
+       "label": "メガネ007-02",
+       "original": "メガネ007-02.png"
+      }
+     ]
+    },
+    "hat": {
+     "name": "帽子",
+     "order": 10,
+     "parts": [
+      {
+       "file": "hat-001.png",
+       "path": "/pipoya/adult/hat/hat-001.png",
+       "label": "帽子001_兵士-01",
+       "original": "帽子001_兵士-01.png"
+      },
+      {
+       "file": "hat-002.png",
+       "path": "/pipoya/adult/hat/hat-002.png",
+       "label": "帽子001_兵士-02",
+       "original": "帽子001_兵士-02.png"
+      },
+      {
+       "file": "hat-003.png",
+       "path": "/pipoya/adult/hat/hat-003.png",
+       "label": "帽子001_兵士-03",
+       "original": "帽子001_兵士-03.png"
+      },
+      {
+       "file": "hat-004.png",
+       "path": "/pipoya/adult/hat/hat-004.png",
+       "label": "帽子002_王冠",
+       "original": "帽子002_王冠.png"
+      },
+      {
+       "file": "hat-005.png",
+       "path": "/pipoya/adult/hat/hat-005.png",
+       "label": "帽子003_ティアラ",
+       "original": "帽子003_ティアラ.png"
+      },
+      {
+       "file": "hat-006.png",
+       "path": "/pipoya/adult/hat/hat-006.png",
+       "label": "帽子004_後ろ髪飾り",
+       "original": "帽子004_後ろ髪飾り.png"
+      },
+      {
+       "file": "hat-007.png",
+       "path": "/pipoya/adult/hat/hat-007.png",
+       "label": "帽子004_後ろ髪飾り_",
+       "original": "帽子004_後ろ髪飾り_.png"
+      },
+      {
+       "file": "hat-008.png",
+       "path": "/pipoya/adult/hat/hat-008.png",
+       "label": "帽子005_メイドカチューシャ",
+       "original": "帽子005_メイドカチューシャ.png"
+      },
+      {
+       "file": "hat-009.png",
+       "path": "/pipoya/adult/hat/hat-009.png",
+       "label": "帽子006_魔法使い",
+       "original": "帽子006_魔法使い.png"
+      },
+      {
+       "file": "hat-010.png",
+       "path": "/pipoya/adult/hat/hat-010.png",
+       "label": "帽子007_魔女",
+       "original": "帽子007_魔女.png"
+      },
+      {
+       "file": "hat-011.png",
+       "path": "/pipoya/adult/hat/hat-011.png",
+       "label": "帽子008_僧侶",
+       "original": "帽子008_僧侶.png"
+      },
+      {
+       "file": "hat-012.png",
+       "path": "/pipoya/adult/hat/hat-012.png",
+       "label": "帽子009_僧侶",
+       "original": "帽子009_僧侶.png"
+      },
+      {
+       "file": "hat-013.png",
+       "path": "/pipoya/adult/hat/hat-013.png",
+       "label": "帽子010_鉢巻",
+       "original": "帽子010_鉢巻.png"
+      },
+      {
+       "file": "hat-014.png",
+       "path": "/pipoya/adult/hat/hat-014.png",
+       "label": "帽子011_カチューシャ",
+       "original": "帽子011_カチューシャ.png"
+      },
+      {
+       "file": "hat-015.png",
+       "path": "/pipoya/adult/hat/hat-015.png",
+       "label": "帽子012_卵殻",
+       "original": "帽子012_卵殻.png"
+      },
+      {
+       "file": "hat-016.png",
+       "path": "/pipoya/adult/hat/hat-016.png",
+       "label": "帽子013_カボチャ",
+       "original": "帽子013_カボチャ.png"
+      },
+      {
+       "file": "hat-017.png",
+       "path": "/pipoya/adult/hat/hat-017.png",
+       "label": "帽子014_シルクハット",
+       "original": "帽子014_シルクハット.png"
+      },
+      {
+       "file": "hat-018.png",
+       "path": "/pipoya/adult/hat/hat-018.png",
+       "label": "帽子015_リボン01",
+       "original": "帽子015_リボン01.png"
+      },
+      {
+       "file": "hat-019.png",
+       "path": "/pipoya/adult/hat/hat-019.png",
+       "label": "帽子015_リボン02",
+       "original": "帽子015_リボン02.png"
+      },
+      {
+       "file": "hat-020.png",
+       "path": "/pipoya/adult/hat/hat-020.png",
+       "label": "帽子015_リボン03",
+       "original": "帽子015_リボン03.png"
+      },
+      {
+       "file": "hat-021.png",
+       "path": "/pipoya/adult/hat/hat-021.png",
+       "label": "帽子016_リボン01",
+       "original": "帽子016_リボン01.png"
+      },
+      {
+       "file": "hat-022.png",
+       "path": "/pipoya/adult/hat/hat-022.png",
+       "label": "帽子016_リボン02",
+       "original": "帽子016_リボン02.png"
+      },
+      {
+       "file": "hat-023.png",
+       "path": "/pipoya/adult/hat/hat-023.png",
+       "label": "帽子016_リボン03",
+       "original": "帽子016_リボン03.png"
+      },
+      {
+       "file": "hat-024.png",
+       "path": "/pipoya/adult/hat/hat-024.png",
+       "label": "帽子017_リボン01",
+       "original": "帽子017_リボン01.png"
+      },
+      {
+       "file": "hat-025.png",
+       "path": "/pipoya/adult/hat/hat-025.png",
+       "label": "帽子017_リボン02",
+       "original": "帽子017_リボン02.png"
+      },
+      {
+       "file": "hat-026.png",
+       "path": "/pipoya/adult/hat/hat-026.png",
+       "label": "帽子017_リボン03",
+       "original": "帽子017_リボン03.png"
+      }
+     ]
+    },
+    "shadow": {
+     "name": "阴影",
+     "order": 0,
+     "parts": [
+      {
+       "file": "shadow-001.png",
+       "path": "/pipoya/adult/shadow/shadow-001.png",
+       "label": "影1",
+       "original": "影1.png"
+      }
+     ]
+    },
+    "head-extra": {
+     "name": "头部配件",
+     "order": 13,
+     "parts": [
+      {
+       "file": "head-extra-001.png",
+       "path": "/pipoya/adult/head-extra/head-extra-001.png",
+       "label": "矢筒001-01",
+       "original": "矢筒001-01.png"
+      },
+      {
+       "file": "head-extra-002.png",
+       "path": "/pipoya/adult/head-extra/head-extra-002.png",
+       "label": "耳001-01",
+       "original": "耳001-01.png"
+      },
+      {
+       "file": "head-extra-003.png",
+       "path": "/pipoya/adult/head-extra/head-extra-003.png",
+       "label": "耳001-02",
+       "original": "耳001-02.png"
+      },
+      {
+       "file": "head-extra-004.png",
+       "path": "/pipoya/adult/head-extra/head-extra-004.png",
+       "label": "耳001-03",
+       "original": "耳001-03.png"
+      },
+      {
+       "file": "head-extra-005.png",
+       "path": "/pipoya/adult/head-extra/head-extra-005.png",
+       "label": "耳001-04",
+       "original": "耳001-04.png"
+      },
+      {
+       "file": "head-extra-006.png",
+       "path": "/pipoya/adult/head-extra/head-extra-006.png",
+       "label": "耳001-05",
+       "original": "耳001-05.png"
+      },
+      {
+       "file": "head-extra-007.png",
+       "path": "/pipoya/adult/head-extra/head-extra-007.png",
+       "label": "耳002-01",
+       "original": "耳002-01.png"
+      },
+      {
+       "file": "head-extra-008.png",
+       "path": "/pipoya/adult/head-extra/head-extra-008.png",
+       "label": "耳002-02",
+       "original": "耳002-02.png"
+      },
+      {
+       "file": "head-extra-009.png",
+       "path": "/pipoya/adult/head-extra/head-extra-009.png",
+       "label": "耳002-03",
+       "original": "耳002-03.png"
+      },
+      {
+       "file": "head-extra-010.png",
+       "path": "/pipoya/adult/head-extra/head-extra-010.png",
+       "label": "耳002-04",
+       "original": "耳002-04.png"
+      },
+      {
+       "file": "head-extra-011.png",
+       "path": "/pipoya/adult/head-extra/head-extra-011.png",
+       "label": "耳002-05",
+       "original": "耳002-05.png"
+      },
+      {
+       "file": "head-extra-012.png",
+       "path": "/pipoya/adult/head-extra/head-extra-012.png",
+       "label": "耳003_うさ耳",
+       "original": "耳003_うさ耳.png"
+      },
+      {
+       "file": "head-extra-013.png",
+       "path": "/pipoya/adult/head-extra/head-extra-013.png",
+       "label": "耳004_猫耳",
+       "original": "耳004_猫耳.png"
+      },
+      {
+       "file": "head-extra-014.png",
+       "path": "/pipoya/adult/head-extra/head-extra-014.png",
+       "label": "耳005_犬耳",
+       "original": "耳005_犬耳.png"
+      },
+      {
+       "file": "head-extra-015.png",
+       "path": "/pipoya/adult/head-extra/head-extra-015.png",
+       "label": "耳006_くま耳",
+       "original": "耳006_くま耳.png"
+      },
+      {
+       "file": "head-extra-016.png",
+       "path": "/pipoya/adult/head-extra/head-extra-016.png",
+       "label": "髪追加001-01",
+       "original": "髪追加001-01.png"
+      },
+      {
+       "file": "head-extra-017.png",
+       "path": "/pipoya/adult/head-extra/head-extra-017.png",
+       "label": "髪追加001-02",
+       "original": "髪追加001-02.png"
+      },
+      {
+       "file": "head-extra-018.png",
+       "path": "/pipoya/adult/head-extra/head-extra-018.png",
+       "label": "髪追加002-01",
+       "original": "髪追加002-01.png"
+      },
+      {
+       "file": "head-extra-019.png",
+       "path": "/pipoya/adult/head-extra/head-extra-019.png",
+       "label": "髪追加002-02",
+       "original": "髪追加002-02.png"
+      },
+      {
+       "file": "head-extra-020.png",
+       "path": "/pipoya/adult/head-extra/head-extra-020.png",
+       "label": "髪追加003-01",
+       "original": "髪追加003-01.png"
+      },
+      {
+       "file": "head-extra-021.png",
+       "path": "/pipoya/adult/head-extra/head-extra-021.png",
+       "label": "髪追加003-02",
+       "original": "髪追加003-02.png"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "slug": "elderly",
+   "name": "老人",
+   "categories": {
+    "clothes": {
+     "name": "服装",
+     "order": 6,
+     "parts": [
+      {
+       "file": "clothes-001.png",
+       "path": "/pipoya/elderly/clothes/clothes-001.png",
+       "label": "女_服001_一般人",
+       "original": "女_服001_一般人.png"
+      },
+      {
+       "file": "clothes-002.png",
+       "path": "/pipoya/elderly/clothes/clothes-002.png",
+       "label": "男_服001_一般人",
+       "original": "男_服001_一般人.png"
+      }
+     ]
+    },
+    "skin": {
+     "name": "皮肤",
+     "order": 2,
+     "parts": [
+      {
+       "file": "skin-001.png",
+       "path": "/pipoya/elderly/skin/skin-001.png",
+       "label": "老人_ベース001-01",
+       "original": "老人_ベース001-01.png"
+      },
+      {
+       "file": "skin-002.png",
+       "path": "/pipoya/elderly/skin/skin-002.png",
+       "label": "老人_ベース001-02",
+       "original": "老人_ベース001-02.png"
+      },
+      {
+       "file": "skin-003.png",
+       "path": "/pipoya/elderly/skin/skin-003.png",
+       "label": "老人_ベース001-03",
+       "original": "老人_ベース001-03.png"
+      },
+      {
+       "file": "skin-004.png",
+       "path": "/pipoya/elderly/skin/skin-004.png",
+       "label": "老人_ベース001-04",
+       "original": "老人_ベース001-04.png"
+      },
+      {
+       "file": "skin-005.png",
+       "path": "/pipoya/elderly/skin/skin-005.png",
+       "label": "老人_ベース001-05",
+       "original": "老人_ベース001-05.png"
+      },
+      {
+       "file": "skin-006.png",
+       "path": "/pipoya/elderly/skin/skin-006.png",
+       "label": "老人_ベース001-マネキン",
+       "original": "老人_ベース001-マネキン.png"
+      },
+      {
+       "file": "skin-007.png",
+       "path": "/pipoya/elderly/skin/skin-007.png",
+       "label": "老人_ベース001_髪影なし-01",
+       "original": "老人_ベース001_髪影なし-01.png"
+      },
+      {
+       "file": "skin-008.png",
+       "path": "/pipoya/elderly/skin/skin-008.png",
+       "label": "老人_ベース001_髪影なし-02",
+       "original": "老人_ベース001_髪影なし-02.png"
+      },
+      {
+       "file": "skin-009.png",
+       "path": "/pipoya/elderly/skin/skin-009.png",
+       "label": "老人_ベース001_髪影なし-03",
+       "original": "老人_ベース001_髪影なし-03.png"
+      },
+      {
+       "file": "skin-010.png",
+       "path": "/pipoya/elderly/skin/skin-010.png",
+       "label": "老人_ベース001_髪影なし-04",
+       "original": "老人_ベース001_髪影なし-04.png"
+      },
+      {
+       "file": "skin-011.png",
+       "path": "/pipoya/elderly/skin/skin-011.png",
+       "label": "老人_ベース001_髪影なし-05",
+       "original": "老人_ベース001_髪影なし-05.png"
+      },
+      {
+       "file": "skin-012.png",
+       "path": "/pipoya/elderly/skin/skin-012.png",
+       "label": "老人_ベース001_髪影なし-マネキン",
+       "original": "老人_ベース001_髪影なし-マネキン.png"
+      },
+      {
+       "file": "skin-013.png",
+       "path": "/pipoya/elderly/skin/skin-013.png",
+       "label": "骸骨老人_ベース001-01",
+       "original": "骸骨老人_ベース001-01.png"
+      },
+      {
+       "file": "skin-014.png",
+       "path": "/pipoya/elderly/skin/skin-014.png",
+       "label": "骸骨老人_ベース001-02",
+       "original": "骸骨老人_ベース001-02.png"
+      },
+      {
+       "file": "skin-015.png",
+       "path": "/pipoya/elderly/skin/skin-015.png",
+       "label": "骸骨老人_ベース001-03",
+       "original": "骸骨老人_ベース001-03.png"
+      },
+      {
+       "file": "skin-016.png",
+       "path": "/pipoya/elderly/skin/skin-016.png",
+       "label": "骸骨老人_ベース001-04",
+       "original": "骸骨老人_ベース001-04.png"
+      },
+      {
+       "file": "skin-017.png",
+       "path": "/pipoya/elderly/skin/skin-017.png",
+       "label": "骸骨老人_ベース001-05",
+       "original": "骸骨老人_ベース001-05.png"
+      }
+     ]
+    },
+    "eyes": {
+     "name": "眼睛",
+     "order": 4,
+     "parts": [
+      {
+       "file": "eyes-001.png",
+       "path": "/pipoya/elderly/eyes/eyes-001.png",
+       "label": "共有_目001",
+       "original": "共有_目001.png"
+      },
+      {
+       "file": "eyes-002.png",
+       "path": "/pipoya/elderly/eyes/eyes-002.png",
+       "label": "共有_目002",
+       "original": "共有_目002.png"
+      },
+      {
+       "file": "eyes-003.png",
+       "path": "/pipoya/elderly/eyes/eyes-003.png",
+       "label": "共有_目003",
+       "original": "共有_目003.png"
+      },
+      {
+       "file": "eyes-004.png",
+       "path": "/pipoya/elderly/eyes/eyes-004.png",
+       "label": "共有_目004",
+       "original": "共有_目004.png"
+      },
+      {
+       "file": "eyes-005.png",
+       "path": "/pipoya/elderly/eyes/eyes-005.png",
+       "label": "共有_目005",
+       "original": "共有_目005.png"
+      },
+      {
+       "file": "eyes-006.png",
+       "path": "/pipoya/elderly/eyes/eyes-006.png",
+       "label": "共有_目006",
+       "original": "共有_目006.png"
+      },
+      {
+       "file": "eyes-007.png",
+       "path": "/pipoya/elderly/eyes/eyes-007.png",
+       "label": "共有_目007",
+       "original": "共有_目007.png"
+      },
+      {
+       "file": "eyes-008.png",
+       "path": "/pipoya/elderly/eyes/eyes-008.png",
+       "label": "共有_目008",
+       "original": "共有_目008.png"
+      },
+      {
+       "file": "eyes-009.png",
+       "path": "/pipoya/elderly/eyes/eyes-009.png",
+       "label": "共有_目009",
+       "original": "共有_目009.png"
+      },
+      {
+       "file": "eyes-010.png",
+       "path": "/pipoya/elderly/eyes/eyes-010.png",
+       "label": "共有_目010",
+       "original": "共有_目010.png"
+      },
+      {
+       "file": "eyes-011.png",
+       "path": "/pipoya/elderly/eyes/eyes-011.png",
+       "label": "女_目001",
+       "original": "女_目001.png"
+      },
+      {
+       "file": "eyes-012.png",
+       "path": "/pipoya/elderly/eyes/eyes-012.png",
+       "label": "女_目002",
+       "original": "女_目002.png"
+      },
+      {
+       "file": "eyes-013.png",
+       "path": "/pipoya/elderly/eyes/eyes-013.png",
+       "label": "女_目003",
+       "original": "女_目003.png"
+      },
+      {
+       "file": "eyes-014.png",
+       "path": "/pipoya/elderly/eyes/eyes-014.png",
+       "label": "女_目004",
+       "original": "女_目004.png"
+      },
+      {
+       "file": "eyes-015.png",
+       "path": "/pipoya/elderly/eyes/eyes-015.png",
+       "label": "女_目005",
+       "original": "女_目005.png"
+      },
+      {
+       "file": "eyes-016.png",
+       "path": "/pipoya/elderly/eyes/eyes-016.png",
+       "label": "女_目006",
+       "original": "女_目006.png"
+      },
+      {
+       "file": "eyes-017.png",
+       "path": "/pipoya/elderly/eyes/eyes-017.png",
+       "label": "女_目007",
+       "original": "女_目007.png"
+      },
+      {
+       "file": "eyes-018.png",
+       "path": "/pipoya/elderly/eyes/eyes-018.png",
+       "label": "女_目008",
+       "original": "女_目008.png"
+      },
+      {
+       "file": "eyes-019.png",
+       "path": "/pipoya/elderly/eyes/eyes-019.png",
+       "label": "女_目009",
+       "original": "女_目009.png"
+      },
+      {
+       "file": "eyes-020.png",
+       "path": "/pipoya/elderly/eyes/eyes-020.png",
+       "label": "女_目010",
+       "original": "女_目010.png"
+      },
+      {
+       "file": "eyes-021.png",
+       "path": "/pipoya/elderly/eyes/eyes-021.png",
+       "label": "男_目001",
+       "original": "男_目001.png"
+      },
+      {
+       "file": "eyes-022.png",
+       "path": "/pipoya/elderly/eyes/eyes-022.png",
+       "label": "男_目002",
+       "original": "男_目002.png"
+      },
+      {
+       "file": "eyes-023.png",
+       "path": "/pipoya/elderly/eyes/eyes-023.png",
+       "label": "男_目003",
+       "original": "男_目003.png"
+      },
+      {
+       "file": "eyes-024.png",
+       "path": "/pipoya/elderly/eyes/eyes-024.png",
+       "label": "男_目004",
+       "original": "男_目004.png"
+      },
+      {
+       "file": "eyes-025.png",
+       "path": "/pipoya/elderly/eyes/eyes-025.png",
+       "label": "男_目005",
+       "original": "男_目005.png"
+      },
+      {
+       "file": "eyes-026.png",
+       "path": "/pipoya/elderly/eyes/eyes-026.png",
+       "label": "男_目006",
+       "original": "男_目006.png"
+      },
+      {
+       "file": "eyes-027.png",
+       "path": "/pipoya/elderly/eyes/eyes-027.png",
+       "label": "男_目007",
+       "original": "男_目007.png"
+      },
+      {
+       "file": "eyes-028.png",
+       "path": "/pipoya/elderly/eyes/eyes-028.png",
+       "label": "男_目008",
+       "original": "男_目008.png"
+      },
+      {
+       "file": "eyes-029.png",
+       "path": "/pipoya/elderly/eyes/eyes-029.png",
+       "label": "男_目009",
+       "original": "男_目009.png"
+      },
+      {
+       "file": "eyes-030.png",
+       "path": "/pipoya/elderly/eyes/eyes-030.png",
+       "label": "男_目010",
+       "original": "男_目010.png"
+      }
+     ]
+    },
+    "hair": {
+     "name": "发型",
+     "order": 11,
+     "parts": [
+      {
+       "file": "hair-001.png",
+       "path": "/pipoya/elderly/hair/hair-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-002.png",
+       "path": "/pipoya/elderly/hair/hair-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-003.png",
+       "path": "/pipoya/elderly/hair/hair-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-004.png",
+       "path": "/pipoya/elderly/hair/hair-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-005.png",
+       "path": "/pipoya/elderly/hair/hair-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-006.png",
+       "path": "/pipoya/elderly/hair/hair-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-007.png",
+       "path": "/pipoya/elderly/hair/hair-007.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-008.png",
+       "path": "/pipoya/elderly/hair/hair-008.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-009.png",
+       "path": "/pipoya/elderly/hair/hair-009.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-010.png",
+       "path": "/pipoya/elderly/hair/hair-010.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-011.png",
+       "path": "/pipoya/elderly/hair/hair-011.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-012.png",
+       "path": "/pipoya/elderly/hair/hair-012.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      }
+     ]
+    },
+    "hair-hat": {
+     "name": "发型(帽用)",
+     "order": 12,
+     "parts": [
+      {
+       "file": "hair-hat-001.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-001.png",
+       "label": "女_髪001-01",
+       "original": "女_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-002.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-002.png",
+       "label": "女_髪001-02",
+       "original": "女_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-003.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-003.png",
+       "label": "女_髪002-01",
+       "original": "女_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-004.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-004.png",
+       "label": "女_髪002-02",
+       "original": "女_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-005.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-005.png",
+       "label": "女_髪003-01",
+       "original": "女_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-006.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-006.png",
+       "label": "女_髪003-02",
+       "original": "女_髪003-02.png"
+      },
+      {
+       "file": "hair-hat-007.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-007.png",
+       "label": "男_髪001-01",
+       "original": "男_髪001-01.png"
+      },
+      {
+       "file": "hair-hat-008.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-008.png",
+       "label": "男_髪001-02",
+       "original": "男_髪001-02.png"
+      },
+      {
+       "file": "hair-hat-009.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-009.png",
+       "label": "男_髪002-01",
+       "original": "男_髪002-01.png"
+      },
+      {
+       "file": "hair-hat-010.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-010.png",
+       "label": "男_髪002-02",
+       "original": "男_髪002-02.png"
+      },
+      {
+       "file": "hair-hat-011.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-011.png",
+       "label": "男_髪003-01",
+       "original": "男_髪003-01.png"
+      },
+      {
+       "file": "hair-hat-012.png",
+       "path": "/pipoya/elderly/hair-hat/hair-hat-012.png",
+       "label": "男_髪003-02",
+       "original": "男_髪003-02.png"
+      }
+     ]
+    },
+    "item-effect": {
+     "name": "武器特效",
+     "order": 1,
+     "parts": []
+    },
+    "beard": {
+     "name": "胡须",
+     "order": 8,
+     "parts": [
+      {
+       "file": "beard-001.png",
+       "path": "/pipoya/elderly/beard/beard-001.png",
+       "label": "ヒゲ001-01",
+       "original": "ヒゲ001-01.png"
+      },
+      {
+       "file": "beard-002.png",
+       "path": "/pipoya/elderly/beard/beard-002.png",
+       "label": "ヒゲ001-02",
+       "original": "ヒゲ001-02.png"
+      }
+     ]
+    },
+    "cloak": {
+     "name": "披风",
+     "order": 7,
+     "parts": [
+      {
+       "file": "cloak-001.png",
+       "path": "/pipoya/elderly/cloak/cloak-001.png",
+       "label": "マント001-01",
+       "original": "マント001-01.png"
+      },
+      {
+       "file": "cloak-002.png",
+       "path": "/pipoya/elderly/cloak/cloak-002.png",
+       "label": "マント001-02",
+       "original": "マント001-02.png"
+      },
+      {
+       "file": "cloak-003.png",
+       "path": "/pipoya/elderly/cloak/cloak-003.png",
+       "label": "マント001-03",
+       "original": "マント001-03.png"
+      },
+      {
+       "file": "cloak-004.png",
+       "path": "/pipoya/elderly/cloak/cloak-004.png",
+       "label": "尻尾001_うさ",
+       "original": "尻尾001_うさ.png"
+      },
+      {
+       "file": "cloak-005.png",
+       "path": "/pipoya/elderly/cloak/cloak-005.png",
+       "label": "尻尾002_猫",
+       "original": "尻尾002_猫.png"
+      },
+      {
+       "file": "cloak-006.png",
+       "path": "/pipoya/elderly/cloak/cloak-006.png",
+       "label": "尻尾003_犬",
+       "original": "尻尾003_犬.png"
+      },
+      {
+       "file": "cloak-007.png",
+       "path": "/pipoya/elderly/cloak/cloak-007.png",
+       "label": "尻尾004_くま",
+       "original": "尻尾004_くま.png"
+      }
+     ]
+    },
+    "makeup": {
+     "name": "妆容",
+     "order": 3,
+     "parts": [
+      {
+       "file": "makeup-001.png",
+       "path": "/pipoya/elderly/makeup/makeup-001.png",
+       "label": "メイク001_眉毛-01",
+       "original": "メイク001_眉毛-01.png"
+      },
+      {
+       "file": "makeup-002.png",
+       "path": "/pipoya/elderly/makeup/makeup-002.png",
+       "label": "メイク001_眉毛-02",
+       "original": "メイク001_眉毛-02.png"
+      },
+      {
+       "file": "makeup-003.png",
+       "path": "/pipoya/elderly/makeup/makeup-003.png",
+       "label": "メイク002_傷",
+       "original": "メイク002_傷.png"
+      }
+     ]
+    },
+    "glasses": {
+     "name": "眼镜",
+     "order": 9,
+     "parts": [
+      {
+       "file": "glasses-001.png",
+       "path": "/pipoya/elderly/glasses/glasses-001.png",
+       "label": "メガネ001-01",
+       "original": "メガネ001-01.png"
+      },
+      {
+       "file": "glasses-002.png",
+       "path": "/pipoya/elderly/glasses/glasses-002.png",
+       "label": "メガネ001-02",
+       "original": "メガネ001-02.png"
+      },
+      {
+       "file": "glasses-003.png",
+       "path": "/pipoya/elderly/glasses/glasses-003.png",
+       "label": "メガネ002-01",
+       "original": "メガネ002-01.png"
+      },
+      {
+       "file": "glasses-004.png",
+       "path": "/pipoya/elderly/glasses/glasses-004.png",
+       "label": "メガネ002-02",
+       "original": "メガネ002-02.png"
+      }
+     ]
+    },
+    "hat": {
+     "name": "帽子",
+     "order": 10,
+     "parts": [
+      {
+       "file": "hat-001.png",
+       "path": "/pipoya/elderly/hat/hat-001.png",
+       "label": "帽子001_兵士",
+       "original": "帽子001_兵士.png"
+      },
+      {
+       "file": "hat-002.png",
+       "path": "/pipoya/elderly/hat/hat-002.png",
+       "label": "帽子002_王冠",
+       "original": "帽子002_王冠.png"
+      },
+      {
+       "file": "hat-003.png",
+       "path": "/pipoya/elderly/hat/hat-003.png",
+       "label": "帽子003_ティアラ",
+       "original": "帽子003_ティアラ.png"
+      },
+      {
+       "file": "hat-004.png",
+       "path": "/pipoya/elderly/hat/hat-004.png",
+       "label": "帽子004_後ろ髪飾り",
+       "original": "帽子004_後ろ髪飾り.png"
+      },
+      {
+       "file": "hat-005.png",
+       "path": "/pipoya/elderly/hat/hat-005.png",
+       "label": "帽子005_メイドカチューシャ",
+       "original": "帽子005_メイドカチューシャ.png"
+      },
+      {
+       "file": "hat-006.png",
+       "path": "/pipoya/elderly/hat/hat-006.png",
+       "label": "帽子006_魔法使い",
+       "original": "帽子006_魔法使い.png"
+      },
+      {
+       "file": "hat-007.png",
+       "path": "/pipoya/elderly/hat/hat-007.png",
+       "label": "帽子007_魔女",
+       "original": "帽子007_魔女.png"
+      },
+      {
+       "file": "hat-008.png",
+       "path": "/pipoya/elderly/hat/hat-008.png",
+       "label": "帽子008_僧侶",
+       "original": "帽子008_僧侶.png"
+      },
+      {
+       "file": "hat-009.png",
+       "path": "/pipoya/elderly/hat/hat-009.png",
+       "label": "帽子009_僧侶",
+       "original": "帽子009_僧侶.png"
+      },
+      {
+       "file": "hat-010.png",
+       "path": "/pipoya/elderly/hat/hat-010.png",
+       "label": "帽子010_鉢巻",
+       "original": "帽子010_鉢巻.png"
+      },
+      {
+       "file": "hat-011.png",
+       "path": "/pipoya/elderly/hat/hat-011.png",
+       "label": "帽子011_カチューシャ",
+       "original": "帽子011_カチューシャ.png"
+      }
+     ]
+    },
+    "shadow": {
+     "name": "阴影",
+     "order": 0,
+     "parts": [
+      {
+       "file": "shadow-001.png",
+       "path": "/pipoya/elderly/shadow/shadow-001.png",
+       "label": "影1",
+       "original": "影1.png"
+      }
+     ]
+    },
+    "head-extra": {
+     "name": "头部配件",
+     "order": 13,
+     "parts": [
+      {
+       "file": "head-extra-001.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-001.png",
+       "label": "耳001-01",
+       "original": "耳001-01.png"
+      },
+      {
+       "file": "head-extra-002.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-002.png",
+       "label": "耳001-02",
+       "original": "耳001-02.png"
+      },
+      {
+       "file": "head-extra-003.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-003.png",
+       "label": "耳001-03",
+       "original": "耳001-03.png"
+      },
+      {
+       "file": "head-extra-004.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-004.png",
+       "label": "耳001-04",
+       "original": "耳001-04.png"
+      },
+      {
+       "file": "head-extra-005.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-005.png",
+       "label": "耳001-05",
+       "original": "耳001-05.png"
+      },
+      {
+       "file": "head-extra-006.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-006.png",
+       "label": "耳003_うさ耳",
+       "original": "耳003_うさ耳.png"
+      },
+      {
+       "file": "head-extra-007.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-007.png",
+       "label": "耳004_猫耳",
+       "original": "耳004_猫耳.png"
+      },
+      {
+       "file": "head-extra-008.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-008.png",
+       "label": "耳005_犬耳",
+       "original": "耳005_犬耳.png"
+      },
+      {
+       "file": "head-extra-009.png",
+       "path": "/pipoya/elderly/head-extra/head-extra-009.png",
+       "label": "耳006_くま耳",
+       "original": "耳006_くま耳.png"
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "categories": [
+  {
+   "slug": "shadow",
+   "name": "阴影",
+   "order": 0
+  },
+  {
+   "slug": "item-effect",
+   "name": "武器特效",
+   "order": 1
+  },
+  {
+   "slug": "skin",
+   "name": "皮肤",
+   "order": 2
+  },
+  {
+   "slug": "base",
+   "name": "身体",
+   "order": 2
+  },
+  {
+   "slug": "makeup",
+   "name": "妆容",
+   "order": 3
+  },
+  {
+   "slug": "eyes",
+   "name": "眼睛",
+   "order": 4
+  },
+  {
+   "slug": "clothes",
+   "name": "服装",
+   "order": 6
+  },
+  {
+   "slug": "cloak",
+   "name": "披风",
+   "order": 7
+  },
+  {
+   "slug": "beard",
+   "name": "胡须",
+   "order": 8
+  },
+  {
+   "slug": "tail",
+   "name": "尾巴",
+   "order": 8
+  },
+  {
+   "slug": "glasses",
+   "name": "眼镜",
+   "order": 9
+  },
+  {
+   "slug": "hat",
+   "name": "帽子",
+   "order": 10
+  },
+  {
+   "slug": "hair",
+   "name": "发型",
+   "order": 11
+  },
+  {
+   "slug": "hair-hat",
+   "name": "发型(帽用)",
+   "order": 12
+  },
+  {
+   "slug": "head-extra",
+   "name": "头部配件",
+   "order": 13
+  },
+  {
+   "slug": "item-1",
+   "name": "道具1",
+   "order": 14
+  },
+  {
+   "slug": "item-2",
+   "name": "道具2",
+   "order": 15
+  },
+  {
+   "slug": "effect",
+   "name": "特效",
+   "order": 17
+  }
+ ],
+ "total": 778
+}

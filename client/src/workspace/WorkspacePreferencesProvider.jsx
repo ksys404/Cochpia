@@ -4,7 +4,7 @@ import { getTypographyFont } from './typographyRegistry';
 const STORAGE_KEY = 'cochpia.workspace-preferences.v1';
 
 const defaults = {
-  theme: { themeId: 'sakura', accentColor: '#C9698B', transitionEnabled: true },
+  theme: { themeId: 'sakura', accentColor: '#B24A6E', transitionEnabled: true, customColors: { canvas: '#160A22', panel: '#1F1130', elevated: '#2A1A40', textStrong: '#F6EDFF', textBody: '#CBB9E2', textMuted: '#9381B0', border: '#3C2852', action: '#FF6FAE', actionHover: '#FF8FC4', onAction: '#2A0B1E' } },
   background: { mode: 'color', color: '#fff6fa', imageUrl: '', gradient: 'radial-gradient(circle at 20% 10%, rgba(201,105,139,.12), transparent 38%)', blur: 0, brightness: 1, saturation: 1, opacity: 1, overlayOpacity: 0, animationEnabled: false },
   typography: { fontFamily: 'system', fontScale: 1, fontWeight: 400, letterSpacing: 0, lineHeight: 1.55 },
   motion: { enabled: false, reducedMotion: true, animationLevel: 'low', intensity: 0, durationScale: 1 },
@@ -12,7 +12,8 @@ const defaults = {
   time: { clockFormat: '24h', showSeconds: false, showDate: true, timezoneMode: 'system', timezone: null, ambientModeEnabled: true },
   language: { locale: 'zh-CN', fallbackLocale: 'zh-CN' },
   accessibility: { highContrast: false, largeText: false, keyboardMode: false, focusVisible: true },
-  workspace: { layoutMode: 'freeform', snapEnabled: true, autoArrangeEnabled: false, dockVisible: true }
+  workspace: { layoutMode: 'freeform', snapEnabled: true, autoArrangeEnabled: false, dockVisible: true },
+  appearance: { cornerRadius: 24, panelOpacity: 1.0 }
 };
 
 const mergeState = value => Object.keys(defaults).reduce((result, key) => {
@@ -29,7 +30,11 @@ const reducer = (state, action) => {
   if (action.type === 'RESET_SLICE') return { ...state, [action.slice]: { ...defaults[action.slice] } };
   if (action.type === 'SET_SETTING') {
     let value = action.value;
-    if (action.slice === 'background' && action.key === 'imageUrl') value = String(value || '').slice(0, 2048);
+    // 背景图：普通 URL 限长；data URL（本地上传）不截断，否则会损坏图片
+    if (action.slice === 'background' && action.key === 'imageUrl') {
+      value = String(value || '');
+      if (!value.startsWith('data:image/')) value = value.slice(0, 2048);
+    }
     if (action.slice === 'background' && action.key === 'gradient') value = String(value || '').slice(0, 1200);
     return { ...state, [action.slice]: { ...state[action.slice], [action.key]: value } };
   }
@@ -38,15 +43,15 @@ const reducer = (state, action) => {
 
 const cssVariables = state => ({
   '--workspace-accent': state.theme.accentColor,
-  '--workspace-background': state.theme.themeId === 'pearl' ? '#f5f0ed' : state.theme.themeId === 'blush' ? '#f4e4e8' : state.theme.themeId === 'mist' ? '#e7eef3' : state.theme.themeId === 'night' ? '#070b12' : state.theme.themeId === 'sakura' ? '#fff6fa' : state.theme.themeId === 'ember' ? '#fdf6ec' : state.theme.themeId === 'moss' ? '#f2f8f4' : state.theme.themeId === 'ink' ? '#f4f3f8' : state.background.color,
+  '--workspace-background': state.theme.themeId === 'pearl' ? '#f5f0ed' : state.theme.themeId === 'blush' ? '#f4e4e8' : state.theme.themeId === 'mist' ? '#e7eef3' : state.theme.themeId === 'night' ? '#0A0F16' : state.theme.themeId === 'sakura' ? '#FBF1F4' : state.theme.themeId === 'ember' ? '#FBF3E7' : state.theme.themeId === 'moss' ? '#EEF5EF' : state.theme.themeId === 'ink' ? '#F2F1F6' : state.theme.themeId === 'va11' ? '#160A22' : state.background.color,
   '--workspace-background-image': state.background.imageUrl ? `url(${state.background.imageUrl})` : 'none',
   '--workspace-background-gradient': state.background.gradient || 'none',
   '--workspace-background-opacity': state.background.opacity,
   '--workspace-background-blur': `${state.background.blur}px`,
   '--workspace-background-brightness': state.background.brightness,
   '--workspace-background-saturation': state.background.saturation,
-  '--workspace-surface-contrast': ['blush', 'pearl', 'mist'].includes(state.theme.themeId) ? 'rgba(255,255,255,.72)' : 'rgba(7,18,28,.42)',
-  '--workspace-surface-border': ['blush', 'pearl', 'mist'].includes(state.theme.themeId) ? 'rgba(35,52,67,.22)' : 'rgba(255,255,255,.18)',
+  '--workspace-surface-contrast': ['blush', 'pearl', 'mist', 'sakura', 'ember', 'moss', 'ink'].includes(state.theme.themeId) ? 'rgba(255,255,255,.72)' : 'rgba(7,18,28,.42)',
+  '--workspace-surface-border': ['blush', 'pearl', 'mist', 'sakura', 'ember', 'moss', 'ink'].includes(state.theme.themeId) ? 'rgba(35,52,67,.22)' : 'rgba(255,255,255,.18)',
   '--workspace-font-scale': state.typography.fontScale * (state.accessibility.largeText ? 1.15 : 1),
   '--workspace-font-family': getTypographyFont(state.typography.fontFamily).stack,
   '--workspace-font-weight': state.typography.fontWeight,
@@ -58,6 +63,9 @@ const cssVariables = state => ({
   '--font-size-lg': `${1.125 * state.typography.fontScale * (state.accessibility.largeText ? 1.15 : 1)}rem`,
   '--font-size-xl': `${1.5 * state.typography.fontScale * (state.accessibility.largeText ? 1.15 : 1)}rem`,
   '--font-size-display': `${2 * state.typography.fontScale * (state.accessibility.largeText ? 1.15 : 1)}rem`,
+  '--app-radius': `${state.appearance.cornerRadius}px`,
+  '--panel-alpha': state.appearance.panelOpacity,
+  '--panel-blur': `${Math.round((1 - state.appearance.panelOpacity) * 40)}px`,
   '--workspace-ambient-duration': state.motion.animationLevel === 'low' ? '30s' : state.motion.animationLevel === 'high' ? '12s' : '21s',
   '--workspace-motion-duration': state.motion.reducedMotion || !state.motion.enabled ? '0ms' : `${state.motion.durationScale * 420}ms`
 });
@@ -68,6 +76,16 @@ export function WorkspacePreferencesProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, readState);
   useEffect(() => {
     Object.entries(cssVariables(state)).forEach(([key, value]) => document.documentElement.style.setProperty(key, value));
+    // 自定义色卡：themeId === 'custom' 时用用户自定义颜色覆盖主题变量
+    if (state.theme.themeId === 'custom' && state.theme.customColors) {
+      const c = state.theme.customColors;
+      const overrides = {
+        '--surface-canvas': c.canvas, '--surface-panel': c.panel, '--surface-elevated': c.elevated,
+        '--text-strong': c.textStrong, '--text-body': c.textBody, '--text-muted': c.textMuted,
+        '--border-default': c.border, '--action-primary': c.action, '--action-primary-hover': c.actionHover, '--on-action': c.onAction
+      };
+      Object.entries(overrides).forEach(([key, value]) => { if (value) document.documentElement.style.setProperty(key, value); });
+    }
     document.documentElement.dataset.theme = state.theme.themeId;
     document.documentElement.dataset.locale = state.language.locale;
     document.documentElement.dataset.contrast = state.accessibility.highContrast ? 'high' : 'normal';

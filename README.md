@@ -52,6 +52,8 @@ npm test
 npm run build
 ```
 
+发布前进度、隐私/密钥审计和 GitHub 推送阻断项见：[`docs/开发进度与GitHub发布前审计.md`](docs/开发进度与GitHub发布前审计.md)。
+
 ## Production modes
 
 Local development uses `AUTH_MODE=off`, `MEMORY_MODE=local`, and can use `MODEL_PROVIDER=mock`.

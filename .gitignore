@@ -7,3 +7,10 @@ work/
 cochpia-preview.html
 client/cochpia-app-preview.html
 Knowledge_Base/
+
+# Local QA/browser state and user-provided private uploads
+.visual-qa-browser/
+uploads/
+
+# User-provided media: publish only after ownership/license is confirmed
+client/public/306155_medium.mp4

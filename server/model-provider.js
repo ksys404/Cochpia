@@ -32,9 +32,19 @@ function modelErrorCode(error) {
 }
 
 function modelRequestError(response, payload) {
-  const error = new Error(errorMessage(response, payload));
+  const detail = errorMessage(response, payload);
+  const message = response.status === 402
+    ? `Model provider balance is insufficient: ${detail}`
+    : detail;
+  const error = new Error(message);
   error.status = response.status;
-  error.code = response.status === 401 ? 'MODEL_AUTH_FAILED' : response.status === 404 ? 'MODEL_NOT_FOUND' : 'MODEL_CONNECTION_FAILED';
+  error.code = response.status === 401
+    ? 'MODEL_AUTH_FAILED'
+    : response.status === 402
+      ? 'MODEL_INSUFFICIENT_BALANCE'
+      : response.status === 404
+        ? 'MODEL_NOT_FOUND'
+        : 'MODEL_CONNECTION_FAILED';
   return error;
 }
 
@@ -97,7 +107,14 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
       ? `\n\n临近日程：\n${runtimeContext.upcomingEvents.map(event => `- ${event.title}（${String(event.date).slice(0, 10)}${event.note ? `，备注：${event.note}` : ''}）`).join('\n')}`
       : '';
     const atmosphere = runtimeContext?.atmosphere ? `\n\n互动氛围：${runtimeContext.atmosphere}` : '';
-    const system = `${basePrompt}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
+    const genderLabel = ({ none: '无性别（以「它」称呼）', male: '男（以「他」称呼）', female: '女（以「她」称呼）', other: '其他（以「Ta」称呼）' })[runtimeContext?.profile?.gender] || runtimeContext?.profile?.gender || '无性别';
+    const profileSection = runtimeContext?.profile
+      ? `\n\n角色设定：\n- 名字：${runtimeContext.profile.name || 'Cochpia'}\n- 性别：${genderLabel}\n- 年龄：${runtimeContext.profile.age != null ? `${runtimeContext.profile.age} 岁` : '无（永恒，不设年龄）'}`
+      : '';
+    const modeSection = runtimeContext?.mode === 'work'
+      ? '\n\n工作模式：你当前处于工作模式，是一位任务导向的编程助手。请直接、简洁、高效地解决问题，必要时给出可执行的步骤或代码。'
+      : '';
+    const system = `${basePrompt}${profileSection}${modeSection}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
     return { system, user: String(message) };
   };
 
@@ -241,5 +258,36 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
     } finally { clearTimeout(timeout); }
   };
 
-  return { ...config, generate, stream };
+  const generateWithTools = async ({ system, messages, tools, signal: externalSignal } = {}) => {
+    if (!config.ready) throw new Error(config.error);
+    if (config.protocol !== 'openai-compatible') {
+      return { content: await generate({ message: messages[messages.length - 1]?.content || '', signal: externalSignal }), toolCalls: [] };
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Number(process.env.MODEL_TIMEOUT_MS || 30000));
+    const signal = externalSignal || controller.signal;
+    try {
+      const response = await fetch(config.apiURL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+        body: JSON.stringify({
+          model: config.model, stream: false, temperature: 0.2,
+          messages: [{ role: 'system', content: system }, ...messages],
+          tools: tools.map(tool => ({ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.parameters } }))
+        }),
+        signal
+      });
+      const payload = await response.json();
+      if (!response.ok) throw modelRequestError(response, payload);
+      const message = payload?.choices?.[0]?.message || {};
+      return { content: message.content || '', toolCalls: Array.isArray(message.tool_calls) ? message.tool_calls : [] };
+    } catch (error) {
+      if (error.name === 'AbortError') { const timedOut = new Error('Model request timed out', { cause: error }); timedOut.code = 'MODEL_TIMEOUT'; throw timedOut; }
+      throw error;
+    } finally { clearTimeout(timeout); }
+  };
+
+  const composeSystemPrompt = ({ recalled = [], runtimeContext = null } = {}) => composePrompts({ message: '', recalled, runtimeContext }).system;
+
+  return { ...config, generate, stream, generateWithTools, composeSystemPrompt };
 }

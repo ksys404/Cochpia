@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-20",
+  "project": "Cochpia / 共生人生",
+  "commercialUsePolicy": "Only assets with verified commercial-use permission may enter this directory.",
+  "assets": [
+    {
+      "id": "pipoya-character-composer-32x32",
+      "status": "approved-prototype-and-game-use",
+      "title": "グラフィック合成器用32×32キャラチップデータ",
+      "author": "ぴぽや / Pipoya",
+      "source": "https://pipoya.net/sozai/",
+      "license": "作者发布的使用条款：商业/非商业使用可；可加工；可二次分发；不得单独出售素材本身；无需署名。以随包 readme.txt 和作者页面的最新条款为准。",
+      "localSource": "work/pipoya-assets",
+      "runtimePath": "client/public/pipoya",
+      "usedFiles": "778 个已整理的正面 PNG 部件，以及对应 manifest.json；$ 前缀背面部件暂未接入",
+      "format": "96×128 sprite sheet，32×32，3 帧，4 方向",
+      "notes": "用于纸娃娃原型、角色头像和后续行走图开发；不得拆包单独售卖。"
+    },
+    {
+      "id": "kenney-city-kit",
+      "status": "candidate-not-downloaded",
+      "title": "Kenney City Kit",
+      "author": "Kenney",
+      "source": "https://kenney.nl/assets/city-kit",
+      "license": "待本地可访问时再次核对官方页面和下载包内 LICENSE；候选方向通常为 CC0，但本项目未在本批次将其视为已核验素材。",
+      "usedFiles": [],
+      "notes": "本批次未下载。命令行访问官方站点失败，禁止在授权未复核前进入正式资源目录。"
+    }
+  ]
+}
