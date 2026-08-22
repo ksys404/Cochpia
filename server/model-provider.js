@@ -94,6 +94,9 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
   };
   const composePrompts = ({ message, recalled = [], runtimeContext = null }) => {
     const context = recalled.map(item => `- ${item.summary}`).join('\n') || '暂无相关记忆';
+    const memoryGovernance = runtimeContext?.memoryBundle
+      ? `\n\n记忆系统状态：${runtimeContext.memoryBundle.answerability || 'not_found'}；一致性：${runtimeContext.memoryBundle.consistency || 'unknown'}；策略结果：${runtimeContext.memoryBundle.policyResult || 'unknown'}`
+      : '';
     const history = (runtimeContext?.messages || [])
       .filter(item => item.content && item.content !== message)
       .map(item => `${item.role}: ${item.content}`)
@@ -114,7 +117,7 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
     const modeSection = runtimeContext?.mode === 'work'
       ? '\n\n工作模式：你当前处于工作模式，是一位任务导向的编程助手。请直接、简洁、高效地解决问题，必要时给出可执行的步骤或代码。不要把工作回应伪装成情感陪伴。'
       : `\n\n陪伴模式：你当前处于陪伴模式。优先理解用户的感受和真实意图，不要把普通分享自动转换成任务。保持自然、具体、有连续性的回应；不声称拥有真实意识，不制造依赖，不替用户做重要决定。当前陪伴意图：${({ listen: '倾听并回应', comfort: '安慰和情绪支持', advice: '先理解再提供建议', accompany: '陪用户一起完成一件事', quiet: '少说一些，安静陪伴' })[runtimeContext?.companionIntent] || '倾听并回应'}。`;
-    const system = `${basePrompt}${profileSection}${modeSection}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
+    const system = `${basePrompt}${profileSection}${modeSection}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}${memoryGovernance}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
     return { system, user: String(message) };
   };
 
