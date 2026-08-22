@@ -35,7 +35,7 @@
 ### 审计结论
 
 - 未发现实际 API key、私钥、Bearer 凭据或完整数据库密码写入源码、说明文档或示例配置。
-- `MODEL_*_API_KEY`、`DATABASE_URL`、`MEMORY_MCP_TOKEN` 等命中均为变量名、占位符或安全说明，不是真实凭据。
+- `MODEL_*_API_KEY`、`DATABASE_URL`、`MEMORY_MODULE_SERVICE_TOKEN` 等命中均为变量名、占位符或安全说明，不是真实凭据。
 - 根目录 `.env` 已被 `.gitignore` 忽略，且不应加入暂存区；发布前仍需再次确认 `git ls-files .env` 无输出。
 - `uploads/` 包含用户上传图片，已加入忽略规则，不得发布。
 - `.visual-qa-browser/` 是本地浏览器验收缓存，可能包含环境状态，已加入忽略规则，不得发布。

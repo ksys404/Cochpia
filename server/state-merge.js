@@ -37,5 +37,38 @@ export function mergeState(base, incoming) {
   if (!merged.personality && incoming.personality) merged.personality = incoming.personality;
   if (!merged.profile && incoming.profile) merged.profile = incoming.profile;
   if (!merged.workspacePreferences && incoming.workspacePreferences) merged.workspacePreferences = incoming.workspacePreferences;
+
+  if (incoming.memoryModule && typeof incoming.memoryModule === 'object') {
+    const currentModule = merged.memoryModule && typeof merged.memoryModule === 'object' ? structuredClone(merged.memoryModule) : {};
+    const incomingModule = incoming.memoryModule;
+    const mergeModuleArray = key => {
+      if (!Array.isArray(incomingModule[key])) return;
+      const target = Array.isArray(currentModule[key]) ? currentModule[key].slice() : [];
+      const existing = new Set(target.map(item => item?.id !== undefined ? `id:${item.id}` : `json:${JSON.stringify(item)}`));
+      for (const item of incomingModule[key]) {
+        if (!item || typeof item !== 'object') continue;
+        const identity = item.id !== undefined ? `id:${item.id}` : `json:${JSON.stringify(item)}`;
+        if (!existing.has(identity)) {
+          target.push(item);
+          existing.add(identity);
+        }
+      }
+      currentModule[key] = target;
+    };
+    for (const key of ['rawEvents', 'outboxEvents', 'sessions', 'profileSnapshots', 'profileSnapshotItems', 'profileProjections', 'profileProjectionItems', 'indexDocuments', 'episodes', 'episodeMembers', 'assertions', 'assertionVersions', 'assertionVersionSources', 'currentStates', 'currentStateSources', 'profileProjectionSources', 'confirmations', 'accessConfirmations', 'mentionCooldowns', 'pins', 'scopeGrants', 'deletionOperations', 'tombstones', 'auditEvents', 'idempotencyRecords', 'jobAttempts']) mergeModuleArray(key);
+    if (incomingModule.redactionEpochs && typeof incomingModule.redactionEpochs === 'object') {
+      currentModule.redactionEpochs ||= {};
+      for (const [key, value] of Object.entries(incomingModule.redactionEpochs)) {
+        currentModule.redactionEpochs[key] = Math.max(Number(currentModule.redactionEpochs[key] || 0), Number(value || 0));
+      }
+    }
+    currentModule.sequence = Math.max(Number(currentModule.sequence || 0), Number(incomingModule.sequence || 0));
+    currentModule.persistenceBaseSequence = Math.max(Number(currentModule.persistenceBaseSequence || 0), Number(incomingModule.persistenceBaseSequence || 0));
+    currentModule.grantVersion = Math.max(Number(currentModule.grantVersion || 0), Number(incomingModule.grantVersion || 0));
+    currentModule.policyVersion ||= incomingModule.policyVersion || 'memory-policy-v1';
+    currentModule.legacyImportVersion = Math.max(Number(currentModule.legacyImportVersion || 0), Number(incomingModule.legacyImportVersion || 0));
+    merged.memoryModule = currentModule;
+  }
+
   return merged;
 }

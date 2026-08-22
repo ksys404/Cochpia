@@ -1,0 +1,712 @@
+openapi: 3.1.0
+info:
+  title: Cochpia Memory Module API
+  version: 1.0.0
+  description: |
+    Canonical V1 API for tenant- and subject-bound memory storage, retrieval,
+    governance, confirmation, and session state. Request bodies must not be
+    used to override authenticated tenant or subject context.
+servers:
+  - url: /
+    description: Service-relative URL
+tags:
+  - name: Ingest
+  - name: Memories
+  - name: Retrieval
+  - name: Governance
+  - name: Confirmations
+  - name: Sessions
+paths:
+  /v1/events:
+    post:
+      tags: [Ingest]
+      summary: Ingest a source event
+      operationId: recordEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventWriteRequest'
+      responses:
+        '202':
+          description: Accepted, stored or deliberately not stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventWriteResponse'
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+
+  /v1/sessions:
+    post:
+      tags: [Sessions]
+      summary: Create a TTL-bound memory session
+      operationId: createSession
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+      responses:
+        '201':
+          description: Session created
+          content: {application/json: {schema: {$ref: '#/components/schemas/SessionResponse'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+
+  /v1/access-grants:
+    post:
+      tags: [Governance]
+      summary: Grant an Agent access to user-scope memory
+      operationId: grantUserScope
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrantCreateRequest'
+      responses:
+        '201':
+          description: Grant created
+          content: {application/json: {schema: {$ref: '#/components/schemas/GrantResponse'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /v1/memories:
+    get:
+      tags: [Memories]
+      summary: List visible memories with an opaque cursor
+      operationId: listMemories
+      parameters:
+        - {$ref: '#/components/parameters/Purpose'}
+        - {name: scope_type, in: query, schema: {type: string, enum: [user, relationship, session]}}
+        - {name: sensitivity, in: query, schema: {type: string, enum: [S0, S1, S2, S3]}}
+        - {name: status, in: query, schema: {type: string}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Cursor'}
+      responses:
+        '200':
+          description: Memory page
+          content: {application/json: {schema: {$ref: '#/components/schemas/MemoryPage'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+    post:
+      tags: [Memories]
+      summary: Create an explicit memory or current-state record
+      operationId: createMemory
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryWriteRequest'
+      responses:
+        '201':
+          description: Memory accepted
+          content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+
+  /v1/memories/{memory_id}:
+    parameters:
+      - $ref: '#/components/parameters/MemoryId'
+    get:
+      tags: [Memories]
+      summary: Read one visible memory
+      operationId: getMemory
+      parameters:
+        - $ref: '#/components/parameters/Purpose'
+      responses:
+        '200':
+          description: Memory
+          content: {application/json: {schema: {$ref: '#/components/schemas/Memory'}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+    delete:
+      tags: [Governance]
+      summary: Physically delete one memory
+      operationId: deleteMemory
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200':
+          description: Deletion operation created
+          content: {application/json: {schema: {$ref: '#/components/schemas/DeletionResponse'}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/memories/{memory_id}/correct:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Create a corrected memory version
+      operationId: correctMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CorrectionRequest'}}}
+      responses:
+        '200':
+          description: Corrected memory
+          content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/UnprocessableEntity'}
+
+  /v1/memories/{memory_id}/promote:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Promote an S0 candidate
+      operationId: promoteCandidate
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Candidate promoted, content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/memories/{memory_id}/pin:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Pin a memory version
+      operationId: pinMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/PinRequest'}}}
+      responses:
+        '200': {description: Pin applied, content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/memories/{memory_id}/unpin:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Remove a pin
+      operationId: unpinMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Pin removed, content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/memories/{memory_id}/revoke:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Revoke a memory
+      operationId: revokeMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Memory revoked, content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/memories/{memory_id}/forget:
+    parameters: [{ $ref: '#/components/parameters/MemoryId' }]
+    post:
+      tags: [Governance]
+      summary: Forget a memory and advance its privacy epoch
+      operationId: forgetMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Memory forgotten, content: {application/json: {schema: {$ref: '#/components/schemas/MemoryMutationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/governance/forget:
+    post:
+      tags: [Governance]
+      summary: Forget a source, session, relationship, or account
+      operationId: forgetTarget
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/GovernanceTargetRequest'}}}
+      responses:
+        '200': {description: Forget completed, content: {application/json: {schema: {$ref: '#/components/schemas/DeletionResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/governance/delete:
+    post:
+      tags: [Governance]
+      summary: Physically delete a source, session, relationship, or account
+      operationId: deleteTarget
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/GovernanceTargetRequest'}}}
+      responses:
+        '200': {description: Delete completed, content: {application/json: {schema: {$ref: '#/components/schemas/DeletionResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/retrieve:
+    post:
+      tags: [Retrieval]
+      summary: Retrieve policy-filtered memories
+      operationId: retrieve
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RetrieveRequest'}}}
+      responses:
+        '200': {description: Retrieval result, content: {application/json: {schema: {$ref: '#/components/schemas/RetrieveResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+
+  /v1/context-bundles:
+    post:
+      tags: [Retrieval]
+      summary: Build a bounded ContextBundle
+      operationId: buildContextBundle
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/ContextBundleRequest'}}}
+      responses:
+        '200': {description: ContextBundle, content: {application/json: {schema: {$ref: '#/components/schemas/ContextBundle'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+
+  /v1/confirmations:
+    get:
+      tags: [Confirmations]
+      summary: List confirmation requests
+      operationId: listConfirmations
+      parameters:
+        - {name: status, in: query, schema: {type: string, default: pending}}
+        - {$ref: '#/components/parameters/Limit'}
+        - {$ref: '#/components/parameters/Cursor'}
+      responses:
+        '200': {description: Confirmation page, content: {application/json: {schema: {$ref: '#/components/schemas/ConfirmationPage'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+
+  /v1/confirmations/{confirmation_id}/confirm:
+    parameters: [{ $ref: '#/components/parameters/ConfirmationId' }]
+    post:
+      tags: [Confirmations]
+      summary: Confirm a pending candidate
+      operationId: confirmMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Confirmation applied, content: {application/json: {schema: {$ref: '#/components/schemas/ConfirmationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/confirmations/{confirmation_id}/reject:
+    parameters: [{ $ref: '#/components/parameters/ConfirmationId' }]
+    post:
+      tags: [Confirmations]
+      summary: Reject a pending candidate
+      operationId: rejectMemory
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/RevisionRequest'}}}
+      responses:
+        '200': {description: Rejection applied, content: {application/json: {schema: {$ref: '#/components/schemas/ConfirmationResponse'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/access-confirmations/{access_confirmation_id}/confirm:
+    parameters: [{ $ref: '#/components/parameters/AccessConfirmationId' }]
+    post:
+      tags: [Confirmations]
+      summary: Confirm one direct-query access request
+      operationId: confirmAccess
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': {description: One-time access token, content: {application/json: {schema: {$ref: '#/components/schemas/AccessTokenResponse'}}}}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/mentions:
+    post:
+      tags: [Retrieval]
+      summary: Record a proactive mention and apply a bounded cooldown
+      operationId: recordMention
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/MentionRecordRequest'}}}
+      responses:
+        '200': {description: Mention recorded or filtered, content: {application/json: {schema: {$ref: '#/components/schemas/MentionRecordResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+
+  /v1/sessions/{session_id}/current-state:
+    parameters: [{ $ref: '#/components/parameters/SessionId' }]
+    post:
+      tags: [Sessions]
+      summary: Write a TTL-bound current state
+      operationId: writeCurrentState
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/CurrentStateWriteRequest'}}}
+      responses:
+        '200': {description: Current state written, content: {application/json: {schema: {$ref: '#/components/schemas/CurrentStateResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/deletion-operations/{deletion_operation_id}:
+    parameters: [{ $ref: '#/components/parameters/DeletionOperationId' }]
+    get:
+      tags: [Governance]
+      summary: Read deletion propagation status
+      operationId: getDeletionOperation
+      responses:
+        '200': {description: Deletion operation, content: {application/json: {schema: {$ref: '#/components/schemas/DeletionOperation'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional mutation key. Body `idempotency_key` is also accepted; if both are supplied they must match.
+      schema: {type: string, minLength: 1, maxLength: 200}
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema: {type: string}
+    Purpose:
+      name: purpose
+      in: query
+      required: false
+      schema: {type: string, enum: [answer_user_query, proactive_mention, profile_view, governance], default: profile_view}
+    MemoryId:
+      name: memory_id
+      in: path
+      required: true
+      schema: {type: string}
+    ConfirmationId:
+      name: confirmation_id
+      in: path
+      required: true
+      schema: {type: string}
+    AccessConfirmationId:
+      name: access_confirmation_id
+      in: path
+      required: true
+      schema: {type: string}
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema: {type: string}
+    DeletionOperationId:
+      name: deletion_operation_id
+      in: path
+      required: true
+      schema: {type: string}
+  responses:
+    BadRequest:
+      description: Invalid request
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Forbidden:
+      description: Forbidden
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    NotFound:
+      description: Resource not found
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    Conflict:
+      description: Stale resource or idempotency conflict
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+    UnprocessableEntity:
+      description: Policy rejected content
+      content: {application/json: {schema: {$ref: '#/components/schemas/ErrorResponse'}}}
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id, retryable, retry_after_ms, current_resource_revision]
+          properties:
+            code: {type: string}
+            message: {type: string}
+            request_id: {type: string}
+            retryable: {type: boolean}
+            retry_after_ms: {type: [integer, 'null'], minimum: 0}
+            current_resource_revision: {type: [integer, 'null'], minimum: 0}
+    ConsistencyToken:
+      type: object
+      required: [token, sourceCommitSeq, privacyEpoch, grantVersion]
+      properties:
+        token: {type: string}
+        sourceCommitSeq: {type: integer}
+        privacyEpoch: {type: integer}
+        grantVersion: {type: integer}
+    RevisionRequest:
+      type: object
+      required: [resource_revision]
+      properties:
+        resource_revision: {type: integer, minimum: 1}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    EventWriteRequest:
+      type: object
+      required: [event_id, content]
+      properties:
+        event_id: {type: string}
+        source_revision: {type: [string, integer], default: '1'}
+        session_id: {type: [string, 'null']}
+        turn_id: {type: [string, 'null']}
+        sequence_no: {type: [integer, 'null']}
+        event_role: {type: string, enum: [user, agent, system, tool, imported], default: user}
+        content_type: {type: string, enum: [plain_text, structured, tool_output, imported], default: plain_text}
+        content: {type: string, maxLength: 12000}
+        occurred_at: {type: [string, 'null'], format: date-time}
+        is_stream_final: {type: boolean, default: true}
+        storage_directive: {type: string, enum: [default, do_not_store], default: default}
+        metadata: {type: object, additionalProperties: false}
+    EventWriteResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        result: {type: string, enum: [accepted_stored, accepted_no_store, duplicate, rejected]}
+        eventId: {type: string}
+        sourceRevision: {type: [string, integer]}
+        rawEventId: {type: string}
+        commitSeq: {type: integer}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    SessionCreateRequest:
+      type: object
+      properties:
+        caller_agent_id: {type: string}
+        expires_at: {type: [string, 'null'], format: date-time}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    SessionResponse:
+      type: object
+      additionalProperties: true
+      required: [id, consistencyToken]
+      properties:
+        id: {type: string}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    GrantCreateRequest:
+      type: object
+      required: [agent_id]
+      properties:
+        agent_id: {type: string}
+        permissions: {type: array, items: {type: string}}
+        purpose: {type: string}
+        expires_at: {type: [string, 'null'], format: date-time}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    GrantResponse:
+      type: object
+      additionalProperties: true
+      required: [grantId, consistencyToken]
+      properties:
+        grantId: {type: string}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    MemoryWriteRequest:
+      type: object
+      required: [content]
+      properties:
+        content: {type: string, maxLength: 4000}
+        summary: {type: string, maxLength: 4000}
+        content_type: {type: string, enum: [plain_text, structured, tool_output, imported, quoted_content], default: plain_text}
+        memory_type: {type: string}
+        scope_type: {type: string, enum: [user, relationship, session], default: user}
+        relationship_agent_id: {type: [string, 'null']}
+        session_id: {type: [string, 'null']}
+        expires_at: {type: [string, 'null'], format: date-time}
+        sensitivity: {type: string, enum: [S0, S1, S2, S3], default: S0}
+        structured_data: {type: object}
+        mention_policy: {type: string, enum: [mentionable, contextualizable_only, do_not_mention]}
+        direct_query_policy: {type: string, enum: [allow, require_confirmation, deny]}
+        storage_directive: {type: string, enum: [default, do_not_store], default: default}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    CorrectionRequest:
+      allOf:
+        - $ref: '#/components/schemas/MemoryWriteRequest'
+        - $ref: '#/components/schemas/RevisionRequest'
+    PinRequest:
+      allOf:
+        - $ref: '#/components/schemas/RevisionRequest'
+        - type: object
+          properties:
+            pinned_version_id: {type: string}
+            follow_current: {type: boolean, default: false}
+    MemoryMutationResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        status: {type: string}
+        memory: {$ref: '#/components/schemas/Memory'}
+        memoryId: {type: string}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    Memory:
+      type: object
+      additionalProperties: true
+      required: [memoryId, scope, status, sensitivity, resourceRevision]
+      properties:
+        memoryId: {type: string}
+        versionId: {type: [string, 'null']}
+        content: {type: [string, 'null']}
+        structuredData: {type: object}
+        scope: {type: object, additionalProperties: true}
+        status: {type: string}
+        sensitivity: {type: string}
+        sourceRefs: {type: array, items: {type: string}}
+        resourceRevision: {type: integer, minimum: 1}
+    MemoryPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Memory'}}
+        nextCursor: {type: [string, 'null']}
+    GovernanceTargetRequest:
+      allOf:
+        - $ref: '#/components/schemas/RevisionRequest'
+        - type: object
+          required: [target_type, target_id]
+          properties:
+            target_type: {type: string, enum: [source_event, session, relationship, account]}
+            target_id: {type: string}
+    DeletionResponse:
+      type: object
+      additionalProperties: true
+      required: [status, deletionOperationId, consistencyToken]
+      properties:
+        status: {type: string}
+        deletionOperationId: {type: string}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    RetrieveRequest:
+      type: object
+      required: [query, purpose]
+      properties:
+        query: {type: string, maxLength: 1000}
+        purpose: {type: string, enum: [answer_user_query, proactive_mention, profile_view, governance]}
+        access_token: {type: string}
+        consistency_token: {$ref: '#/components/schemas/ConsistencyToken'}
+    RetrieveResponse:
+      type: object
+      additionalProperties: true
+      required: [answerability, consistency, serviceMode, items, blocks, consistencyToken]
+      properties:
+        answerability: {type: string, enum: [known, not_found, conflict]}
+        consistency: {type: string}
+        serviceMode: {type: string}
+        items: {type: array, items: {$ref: '#/components/schemas/Memory'}}
+        blocks: {type: array, items: {type: object}}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    ContextBundleRequest:
+      type: object
+      properties:
+        query: {type: string, maxLength: 1000}
+        purpose: {type: string, enum: [answer_user_query, proactive_mention, profile_view, governance]}
+        token_budget: {type: integer, minimum: 1, maximum: 1800, default: 1200}
+        consistency_token: {$ref: '#/components/schemas/ConsistencyToken'}
+    ContextBundle:
+      type: object
+      additionalProperties: true
+      required: [answerability, consistency, policyResult, tokenBudget, tokenCount, consistencyToken]
+      properties:
+        answerability: {type: string}
+        consistency: {type: string}
+        policyResult: {type: string}
+        tokenBudget: {type: integer}
+        tokenCount: {type: integer}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    ConfirmationPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items: {type: array, items: {type: object, additionalProperties: true}}
+        nextCursor: {type: [string, 'null']}
+    ConfirmationResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        confirmation: {type: object, additionalProperties: true}
+        memory: {$ref: '#/components/schemas/Memory'}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    AccessTokenResponse:
+      type: object
+      required: [accessToken, expiresAt, purpose, consistencyToken]
+      properties:
+        accessToken: {type: string}
+        expiresAt: {type: string, format: date-time}
+        purpose: {type: string}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    MentionRecordRequest:
+      type: object
+      required: [memory_ids]
+      properties:
+        memory_ids: {type: array, minItems: 1, maxItems: 50, items: {type: string}}
+        topic_key: {type: string, pattern: '^[a-z0-9:_-]+$', maxLength: 200}
+        cooldown_ms: {type: integer, minimum: 0, maximum: 2592000000, default: 21600000}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    MentionRecordResponse:
+      type: object
+      required: [status, recordedMemoryIds, consistencyToken]
+      properties:
+        status: {type: string, enum: [recorded, filtered, feature_disabled]}
+        recordedMemoryIds: {type: array, items: {type: string}}
+        topicKey: {type: [string, 'null']}
+        cooldownUntil: {type: [string, 'null'], format: date-time}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    CurrentStateWriteRequest:
+      type: object
+      required: [value, expires_at]
+      properties:
+        value: {type: string, maxLength: 2000}
+        content: {type: string, maxLength: 2000}
+        state_type: {type: string, default: current}
+        expires_at: {type: string, format: date-time}
+        resource_revision: {type: integer, minimum: 1, description: Required when replacing an existing state record.}
+        source_event_id: {type: string}
+        storage_directive: {type: string, enum: [default, do_not_store], default: default}
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    CurrentStateResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        status: {type: string}
+        currentState: {type: object, additionalProperties: true}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    DeletionOperation:
+      type: object
+      additionalProperties: true
+      required: [id, targetType, targetId, action, status]
+      properties:
+        id: {type: string}
+        targetType: {type: string}
+        targetId: {type: string}
+        action: {type: string, enum: [forget, delete]}
+        status: {type: string}
