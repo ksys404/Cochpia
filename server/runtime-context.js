@@ -1,6 +1,6 @@
 const MAX_CONTEXT_MESSAGES = 20;
 
-export function buildRuntimeContext({ messages = [], personality = null, recalled = [], summary = '', persona = '', upcomingEvents = [], atmosphere = '', profile = null, mode = 'companion' } = {}) {
+export function buildRuntimeContext({ messages = [], personality = null, recalled = [], summary = '', persona = '', upcomingEvents = [], atmosphere = '', profile = null, mode = 'companion', companionIntent = 'listen' } = {}) {
   return {
     messages: messages.filter(message => !message.supersededAt).slice(-MAX_CONTEXT_MESSAGES).map(message => ({
       id: message.id,
@@ -30,7 +30,8 @@ export function buildRuntimeContext({ messages = [], personality = null, recalle
       note: event.note
     })),
     profile: profile ? { name: profile.name, gender: profile.gender, age: profile.age } : null,
-    mode: String(mode || 'companion')
+    mode: String(mode || 'companion'),
+    companionIntent: String(companionIntent || 'listen')
   };
 }
 

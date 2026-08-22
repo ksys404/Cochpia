@@ -11,6 +11,13 @@ test('mock provider returns a relationship-aware response', async () => {
   assert.match(response, /记得|关系/);
 });
 
+test('companion prompt follows the selected support intent', () => {
+  const provider = createModelProvider('openai', { apiKey: 'fixture', model: 'fixture' });
+  const prompt = provider.composeSystemPrompt({ runtimeContext: { mode: 'companion', companionIntent: 'comfort' } });
+  assert.match(prompt, /陪伴模式/);
+  assert.match(prompt, /安慰和情绪支持/);
+});
+
 test('unsupported provider stays unavailable instead of crashing configuration', async () => {
   const provider = createModelProvider('not-configured');
   assert.equal(provider.ready, false);

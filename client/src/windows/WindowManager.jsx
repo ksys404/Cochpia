@@ -135,7 +135,6 @@ export function WindowManagerProvider({ children }) {
 
   return <WindowManagerContext.Provider value={value}>{children}</WindowManagerContext.Provider>;
 }
-
 export const useWindowManager = () => {
   const value = useContext(WindowManagerContext);
   if (!value) throw new Error('useWindowManager must be used inside WindowManagerProvider');
@@ -256,11 +255,4 @@ export function FloatingWindow({ id, title, children }) {
     <div className="floating-window-content">{children}</div>
     <button type="button" className="floating-window-resize" aria-label={`调整${title}大小`} title="调整窗口大小" onPointerDown={startResize} />
   </section>;
-}
-
-export function WindowDock() {
-  const { state, restoreWindow } = useWindowManager();
-  const dockWindows = Object.values(state.windows).filter(windowRecord => windowRecord.minimized || (windowRecord.closed && !['settings', 'music'].includes(windowRecord.id)));
-  if (!dockWindows.length) return null;
-  return <nav className="window-dock" aria-label="窗口 Dock">{dockWindows.map(windowRecord => <button type="button" key={windowRecord.id} onClick={() => restoreWindow(windowRecord.id)}>{windowRecord.id === 'inspector' ? '共同状态' : windowRecord.id}</button>)}</nav>;
 }

@@ -20,6 +20,9 @@ export function createAgentService(state, persist) {
         model: String(input.model || '').trim().slice(0, 120),
         avatar: String(input.avatar || '✦').slice(0, 8),
         relationship: String(input.relationship || '朋友').slice(0, 40),
+        role: String(input.role || input.relationship || '朋友').trim().slice(0, 80),
+        tone: String(input.tone || '自然、温和').trim().slice(0, 120),
+        memoryNotes: String(input.memoryNotes || '').trim().slice(0, 3000),
         createdAt: now,
         updatedAt: now
       };
@@ -39,6 +42,9 @@ export function createAgentService(state, persist) {
       if (input.model !== undefined) agent.model = String(input.model).trim().slice(0, 120);
       if (input.avatar !== undefined) agent.avatar = String(input.avatar).slice(0, 8);
       if (input.relationship !== undefined) agent.relationship = String(input.relationship).trim().slice(0, 40);
+      if (input.role !== undefined) agent.role = String(input.role).trim().slice(0, 80);
+      if (input.tone !== undefined) agent.tone = String(input.tone).trim().slice(0, 120);
+      if (input.memoryNotes !== undefined) agent.memoryNotes = String(input.memoryNotes).trim().slice(0, 3000);
       agent.updatedAt = new Date().toISOString();
       return persist().then(() => agent);
     },

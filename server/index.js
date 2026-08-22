@@ -111,6 +111,10 @@ state.events ||= [];
 state.agents ||= [];
 state.profile ||= { name: 'Cochpia', gender: 'none', age: null, avatar: '✦' };
 state.mode ||= 'companion';
+for (const session of state.sessions) {
+  session.mode ||= state.mode;
+  session.companionIntent ||= 'listen';
+}
 ensurePsychologyTraits(state.personality);
 
 app.use((req, res, next) => {
@@ -216,8 +220,16 @@ app.get('/api/sessions', (req, res) => {
   res.json(req.query.paginated === 'true' ? { ...result, items } : items);
 });
 app.post('/api/sessions', async (req, res) => {
-  const session = { id: randomUUID(), title: String(req.body?.title || '新的相遇').slice(0, 80), kind: req.body?.kind === 'group' ? 'group' : 'private', agentIds: Array.isArray(req.body?.agentIds) ? req.body.agentIds.map(String).slice(0, 20) : [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...defaultModelSelection() };
+  const session = { id: randomUUID(), title: String(req.body?.title || '新的相遇').slice(0, 80), description: String(req.body?.description || '').trim().slice(0, 300), kind: req.body?.kind === 'group' ? 'group' : 'private', agentIds: Array.isArray(req.body?.agentIds) ? req.body.agentIds.map(String).slice(0, 20) : [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), mode: 'companion', companionIntent: 'listen', ...defaultModelSelection() };
   state.sessions.unshift(session); state.messages[session.id] = []; await saveState(state); res.status(201).json(session);
+});
+app.patch('/api/sessions/:id', async (req, res) => {
+  const session = getSession(req.params.id);
+  if (!session) return fail(res, 404, 'SESSION_NOT_FOUND', 'Session not found');
+  if (req.body?.title !== undefined) session.title = String(req.body.title).trim().slice(0, 80) || session.title;
+  if (req.body?.description !== undefined) session.description = String(req.body.description).trim().slice(0, 300);
+  if (Array.isArray(req.body?.agentIds) && session.kind === 'group') session.agentIds = [...new Set(req.body.agentIds.map(String))].slice(0, 20);
+  touchSession(session); await saveState(state); res.json(session);
 });
 app.get('/api/sessions/:id/model', (req, res) => {
   const session = getSession(req.params.id);
@@ -510,13 +522,20 @@ app.patch('/api/profile', async (req, res) => {
     return res.json(state.profile);
   } catch (error) { return fail(res, 400, 'INVALID_PROFILE', error.message); }
 });
-app.get('/api/mode', (_, res) => res.json({ mode: state.mode }));
+app.get('/api/mode', (req, res) => {
+  const session = req.query.sessionId ? getSession(String(req.query.sessionId)) : null;
+  res.json({ mode: session?.mode || state.mode, companionIntent: session?.companionIntent || 'listen', sessionId: session?.id || null });
+});
 app.patch('/api/mode', async (req, res) => {
   const mode = String(req.body?.mode || '');
   if (!['companion', 'work'].includes(mode)) return fail(res, 400, 'INVALID_MODE', 'Mode must be companion or work');
-  state.mode = mode;
+  const session = req.body?.sessionId ? getSession(String(req.body.sessionId)) : null;
+  if (!session) return fail(res, 404, 'SESSION_NOT_FOUND', 'Session not found');
+  session.mode = mode;
+  if (req.body?.companionIntent && ['listen', 'comfort', 'advice', 'accompany', 'quiet'].includes(req.body.companionIntent)) session.companionIntent = req.body.companionIntent;
+  touchSession(session);
   await saveState(state);
-  res.json({ mode: state.mode });
+  res.json({ mode: session.mode, companionIntent: session.companionIntent || 'listen', sessionId: session.id });
 });
 app.post('/api/chat/approve', (req, res) => {
   const { runId, toolCallId, approved } = req.body || {};
@@ -628,7 +647,7 @@ const detectModeSwitch = text => {
 };
 
 // 用 Pi RPC 执行工作模式任务：spawn `pi --mode rpc`，把事件流映射为 Cochpia 的 SSE 事件
-async function runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId }) {
+async function runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId, mode = 'work' }) {
   const pi = createPiClient({ cwd: process.cwd() });
   let fullText = '';
   await pi.prompt(userMessage.content, event => {
@@ -647,13 +666,14 @@ async function runPiWorkMode({ res, run, userMessage, assistantMessage, sessionI
   state.messages[sessionId].push(assistantMessage);
   touchSession(getSession(sessionId));
   await saveState(state);
-  send(res, 'done', { runId: run.id, messageId: assistantMessage.id, engine: 'pi', mode: state.mode }, run);
+  send(res, 'done', { runId: run.id, messageId: assistantMessage.id, engine: 'pi', mode }, run);
   return true;
 }
 
 async function handleChatStream(req, res, { regenerateMessageId = null, retry = false } = {}) {
-  const { sessionId, message, provider, model: requestedModel, channel } = req.body || {};
+  const { sessionId, message, provider, model: requestedModel, channel, companionIntent } = req.body || {};
   const activeChannel = String(channel || '默认').slice(0, 60);
+  const validCompanionIntents = new Set(['listen', 'comfort', 'advice', 'accompany', 'quiet']);
   if (!sessionId || (!regenerateMessageId && !String(message || '').trim())) return res.status(400).json({ error: 'sessionId and message are required' });
   if (!getSession(sessionId)) return fail(res, 404, 'SESSION_NOT_FOUND', 'Session not found');
   if (!state.messages[sessionId]) state.messages[sessionId] = [];
@@ -661,6 +681,12 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
   if (regenerateMessageId && !regeneration) return fail(res, 404, 'REGENERATE_TARGET_NOT_FOUND', 'Assistant message with a preceding user message was not found');
   const userMessage = regeneration?.user || { id: randomUUID(), role: 'user', content: String(message).trim().slice(0, 8000), createdAt: new Date().toISOString(), channel: activeChannel };
   const session = getSession(sessionId);
+  const currentMode = () => session.mode || state.mode || 'companion';
+  const activeCompanionIntent = validCompanionIntents.has(companionIntent) ? companionIntent : (session.companionIntent || 'listen');
+  if (currentMode() === 'companion' && validCompanionIntents.has(companionIntent) && session.companionIntent !== companionIntent) {
+    session.companionIntent = companionIntent;
+    touchSession(session);
+  }
   const hasRequestSelection = Boolean(provider || requestedModel);
   const requestedProvider = provider || session.modelProvider || process.env.MODEL_PROVIDER || 'mock';
   const requestedName = requestedModel || session.modelName || '';
@@ -713,22 +739,23 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
   }
   // 语言切换工作/陪伴模式
   const switchTo = detectModeSwitch(userMessage.content);
-  if (switchTo && switchTo !== state.mode) {
-    state.mode = switchTo;
+  if (switchTo && switchTo !== currentMode()) {
+    session.mode = switchTo;
+    touchSession(session);
     await saveState(state);
     assistantMessage.content = switchTo === 'work'
       ? '已切换到「工作模式」。现在我会以任务为导向，帮你执行具体任务。需要切回时，说「切换到陪伴模式」即可。'
       : '已切回「陪伴模式」。我会继续像平常一样陪着你。需要工作时，说「切换到工作模式」即可。';
     state.messages[sessionId].push(assistantMessage); touchSession(getSession(sessionId));
     send(res, 'text', { delta: assistantMessage.content }, run);
-    send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: state.mode, provider: selectedModel.provider, model: selectedModel.model }, run);
+    send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: currentMode(), provider: selectedModel.provider, model: selectedModel.model }, run);
     finishRun(run); if (run.response) run.response.end();
     return;
   }
   // 工作模式：优先 Pi RPC（强引擎），失败回退本地工具
-  if (state.mode === 'work') {
+  if (currentMode() === 'work') {
     try {
-      if (await runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId })) {
+      if (await runPiWorkMode({ res, run, userMessage, assistantMessage, sessionId, mode: currentMode() })) {
         finishRun(run); if (run.response) run.response.end(); return;
       }
     } catch (error) {
@@ -741,7 +768,7 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
       const workModel = (workProviderName === requestedProvider && workModelName === selection.config.model)
         ? selectedModel
         : createModelProvider(workProviderName, { model: workModelName });
-      const rt = buildRuntimeContext({ messages: [], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: state.mode });
+      const rt = buildRuntimeContext({ messages: [], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: currentMode(), companionIntent: activeCompanionIntent });
       const system = workModel.composeSystemPrompt({ recalled, runtimeContext: rt });
       const history = state.messages[sessionId].slice(0, -1).slice(-10).map(m => ({ role: m.role, content: m.content }));
       const conversation = [...history, { role: 'user', content: userMessage.content }];
@@ -778,7 +805,7 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
       assistantMessage.content = finalContent || '（工具调用未产生最终回复，请换个问法）';
       state.messages[sessionId].push(assistantMessage); touchSession(getSession(sessionId));
       send(res, 'text', { delta: assistantMessage.content }, run);
-      send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: state.mode, provider: selectedModel.provider, model: selectedModel.model }, run);
+      send(res, 'done', { runId: run.id, messageId: assistantMessage.id, mode: currentMode(), provider: selectedModel.provider, model: selectedModel.model }, run);
       finishRun(run); if (run.response) run.response.end();
     } catch (error) {
       send(res, 'error', { code: error.code || 'WORK_MODE_FAILED', message: error.message }, run);
@@ -792,7 +819,7 @@ async function handleChatStream(req, res, { regenerateMessageId = null, retry = 
     for await (const delta of selectedModel.stream({
       message: userMessage.content,
       recalled,
-      runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: state.mode }),
+      runtimeContext: buildRuntimeContext({ messages: state.messages[sessionId], personality: state.personality, recalled, summary, persona: session.persona, upcomingEvents: events.listUpcoming(7), atmosphere: resolveAtmosphere(session.atmosphere)?.tone, profile: state.profile, mode: currentMode(), companionIntent: activeCompanionIntent }),
       signal: run.controller.signal
     })) {
       if (run.cancelled) { restoreRegeneration(); finishRun(run); return; }

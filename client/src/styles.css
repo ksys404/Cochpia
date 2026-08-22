@@ -256,6 +256,60 @@ body.modal-open { overflow:hidden; }
 .mode-toggle { border:1px solid var(--border-default); border-radius:999px; background:transparent; color:var(--text-muted); padding:4px 12px; font-size:11px; cursor:pointer; flex-shrink:0; }
 .mode-toggle.work { background:var(--action-primary); color:var(--on-action); border-color:var(--action-primary); font-weight:600; }
 
+/* 陪伴模式的即时意图：只影响下一条消息，不把用户锁进固定人格。 */
+.companion-intent-bar { position:fixed; z-index:7; left:50%; bottom:78px; transform:translateX(-50%); display:flex; align-items:center; gap:8px; max-width:calc(100vw - 32px); padding:6px 8px; border:1px solid var(--border-default); border-radius:999px; background:color-mix(in srgb, var(--surface-panel) 88%, transparent); box-shadow:var(--shadow-sm); backdrop-filter:blur(14px); }
+.companion-intent-label { flex:0 0 auto; color:var(--text-muted); font-size:10px; }
+.companion-intent-options { display:flex; gap:4px; min-width:0; overflow-x:auto; scrollbar-width:none; }
+.companion-intent-options::-webkit-scrollbar { display:none; }
+.companion-intent { flex:0 0 auto; min-height:32px; padding:5px 10px; border:1px solid transparent; border-radius:999px; background:transparent; color:var(--text-muted); font-size:10px; cursor:pointer; transition:background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease); }
+.companion-intent:hover, .companion-intent:focus-visible { color:var(--text-strong); border-color:var(--border-default); }
+.companion-intent.active { color:var(--on-action); background:var(--action-primary); border-color:var(--action-primary); }
+
+/* 群聊信息抽屉：把成员管理从聊天流中移出，保留当前对话的阅读空间。 */
+.group-info-trigger { position:fixed; z-index:7; top:12px; right:92px; min-height:36px; padding:7px 12px; border:1px solid var(--border-default); border-radius:999px; background:color-mix(in srgb, var(--surface-panel) 88%, transparent); color:var(--text-body); font-size:11px; box-shadow:var(--shadow-sm); backdrop-filter:blur(14px); cursor:pointer; }
+.group-info-trigger:hover, .group-info-trigger:focus-visible { color:var(--text-strong); border-color:var(--action-primary); }
+.group-chat-identity { position:absolute; z-index:14; top:12px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:8px; width:min(360px, calc(100% - 180px)); min-height:40px; padding:4px 10px; border:1px solid var(--border-default); border-radius:12px; background:color-mix(in srgb, var(--surface-panel) 92%, transparent); box-shadow:var(--shadow-sm); backdrop-filter:blur(14px); cursor:pointer; text-align:left; }
+.group-chat-identity > span:nth-child(2) { display:grid; gap:2px; min-width:0; }
+.group-chat-identity strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-strong); font-size:12px; }
+.group-chat-identity small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:9px; }
+.group-chat-avatar { display:grid; place-items:center; flex:0 0 30px; width:30px; height:30px; border-radius:9px; background:var(--action-primary); color:var(--on-action); font-size:11px; }
+.workspace-overflow { position:fixed; z-index:14; top:10px; right:16px; }
+.workspace-overflow-trigger { display:grid; place-items:center; width:40px; height:40px; border:1px solid var(--border-default); border-radius:50%; background:color-mix(in srgb, var(--surface-panel) 90%, transparent); color:var(--text-strong); font-size:22px; line-height:1; cursor:pointer; box-shadow:var(--shadow-sm); }
+.workspace-overflow-menu { position:absolute; top:46px; right:0; display:grid; gap:3px; width:150px; padding:6px; border:1px solid var(--border-default); border-radius:10px; background:var(--surface-panel); box-shadow:var(--shadow-sm); }
+.workspace-overflow-menu button { min-height:38px; padding:8px 10px; border:0; border-radius:7px; background:transparent; color:var(--text-body); text-align:left; font-size:11px; cursor:pointer; }
+.workspace-overflow-menu button:hover, .workspace-overflow-menu button:focus-visible { background:var(--accent-soft); color:var(--text-strong); }
+.companion-intent-collapsed { position:absolute; z-index:8; right:58px; bottom:calc(100% + 8px); min-height:34px; padding:6px 10px; border:1px solid var(--border-default); border-radius:999px; background:color-mix(in srgb, var(--surface-panel) 94%, transparent); color:var(--text-muted); font-size:10px; box-shadow:var(--shadow-sm); cursor:pointer; }
+.companion-intent-collapsed:hover, .companion-intent-collapsed:focus-visible { color:var(--text-strong); border-color:var(--action-primary); }
+.companion-intent-close { flex:0 0 28px; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:transparent; color:var(--text-muted); font-size:17px; cursor:pointer; }
+.companion-intent-close:hover, .companion-intent-close:focus-visible { background:var(--accent-soft); color:var(--text-strong); }
+.companion-intent-bar { position:absolute; z-index:8; left:auto; right:8px; bottom:calc(100% + 8px); transform:none; max-width:min(560px, calc(100% - 16px)); }
+.group-info-panel { width:min(520px, calc(100vw - 32px)); max-height:min(86vh, 760px); overflow:auto; }
+.group-meta-form, .group-section { display:grid; gap:12px; padding:0 22px 20px; }
+.group-meta-form { padding-top:4px; border-bottom:1px solid var(--border-default); }
+.group-meta-form label, .agent-detail-form label { display:grid; gap:6px; color:var(--text-muted); font-size:10px; }
+.group-meta-form input, .group-meta-form textarea, .agent-detail-form input, .agent-detail-form textarea { width:100%; min-width:0; resize:vertical; border:1px solid var(--border-default); border-radius:var(--radius-sm); background:var(--surface-elevated); color:var(--text-body); padding:9px 10px; font:inherit; line-height:1.5; outline:none; }
+.group-meta-form input:focus, .group-meta-form textarea:focus, .agent-detail-form input:focus, .agent-detail-form textarea:focus { border-color:var(--focus-ring); box-shadow:0 0 0 2px color-mix(in srgb, var(--focus-ring) 20%, transparent); }
+.group-section { padding-top:18px; }
+.group-section + .group-section { border-top:1px solid var(--border-default); }
+.group-section .section-heading { margin:0; }
+.agent-detail-card { border:1px solid var(--border-default); border-radius:10px; background:var(--surface-elevated); overflow:hidden; }
+.agent-detail-card summary { display:flex; align-items:center; gap:10px; min-height:58px; padding:9px 12px; cursor:pointer; list-style:none; }
+.agent-detail-card summary::-webkit-details-marker { display:none; }
+.agent-detail-card summary > span:nth-child(2) { display:grid; gap:3px; min-width:0; flex:1; }
+.agent-detail-card summary strong { color:var(--text-strong); font-size:12px; }
+.agent-detail-card summary small, .invite-row small { color:var(--text-muted); font-size:10px; overflow-wrap:anywhere; }
+.agent-detail-avatar { display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px; border:1px solid var(--border-default); border-radius:50%; background:var(--surface-panel); font-size:19px; }
+.agent-detail-chevron { color:var(--text-muted); transition:transform .2s var(--ease); }
+.agent-detail-card[open] .agent-detail-chevron { transform:rotate(180deg); }
+.agent-detail-form { display:grid; gap:10px; padding:0 12px 12px; border-top:1px solid var(--border-default); }
+.agent-detail-form label:first-child { padding-top:12px; }
+.agent-detail-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.invite-list { display:grid; gap:6px; }
+.invite-row { display:flex; align-items:center; gap:10px; width:100%; min-height:50px; padding:7px 10px; border:1px solid var(--border-default); border-radius:9px; background:var(--surface-elevated); color:var(--text-body); text-align:left; cursor:pointer; }
+.invite-row:hover, .invite-row:focus-visible { border-color:var(--action-primary); }
+.invite-row > span:nth-child(2) { display:grid; gap:3px; min-width:0; flex:1; }
+.invite-row b { color:var(--action-primary); font-size:18px; font-weight:400; }
+
 /* 工作模式工具调用日志 */
 .tool-log { margin:0 auto 18px; width:min(800px,100%); display:grid; gap:8px; }
 .tool-item { border:1px solid var(--border-default); border-radius:10px; background:var(--surface-elevated); overflow:hidden; }
@@ -335,9 +389,6 @@ body.modal-open { overflow:hidden; }
 .floating-window-content { min-width:0; min-height:0; flex:1; overflow:auto; }
 .floating-window-content > .inspector { min-height:100%; border:0; background:transparent; }
 .floating-window-resize { position:absolute; right:0; bottom:0; width:18px; height:18px; border:0; border-radius:8px 0 0 0; background:linear-gradient(135deg, transparent 50%, var(--action-primary) 51%, transparent 58%, var(--action-primary) 62%, transparent 69%); cursor:nwse-resize; opacity:.7; }
-.window-dock { position:fixed; left:50%; bottom:18px; z-index:25; display:flex; gap:6px; transform:translateX(-50%); padding:6px; border:1px solid rgba(255,255,255,var(--material-border-opacity)); border-radius:999px; background:rgba(255,255,255,var(--material-opacity)); box-shadow:0 12px 32px rgba(0,0,0,var(--material-shadow-opacity)); backdrop-filter:blur(var(--material-blur)); }
-.window-dock button { min-height:32px; border:0; border-radius:999px; background:transparent; color:var(--text-body); padding:0 12px; font-size:11px; }
-.window-dock button:hover { background:var(--surface-elevated); color:var(--text-strong); }
 .settings-window-body { display:grid; grid-template-columns:156px minmax(0,1fr); height:100%; min-height:0; }
 .settings-nav { display:grid; align-content:start; gap:3px; padding:14px 10px; border-right:1px solid rgba(255,255,255,var(--material-border-opacity)); overflow:auto; }
 .settings-nav button { min-height:34px; border:0; border-radius:var(--radius-sm); background:transparent; color:var(--text-muted); text-align:left; padding:0 10px; font-size:11px; }
@@ -480,6 +531,9 @@ html[data-animation="disabled"] .ambient-layer *, html[data-animation="disabled"
 @media (max-width: 620px) { .model-dock { top:93px; left:16px; right:16px; max-width:none; }.model-dock select + select { min-width:92px; max-width:112px; }.model-dock .model-dock-info { display:none; }.settings-backdrop { padding:0; place-items:end; }.settings-panel { max-height:88vh; border-radius:10px 10px 0 0; }.settings-header { padding:18px; }.provider-row { display:grid; gap:12px; }.provider-actions { justify-content:space-between; align-items:center; }.provider-actions button { min-height:40px; }.task-launcher { right:16px; bottom:16px; }.task-form { padding:14px 18px; }.task-form button { min-height:40px; }.task-list { padding-left:18px; padding-right:18px; } }
 @media (max-width: 960px) { .conversation { height:calc(100vh - 104px); } }
 @media (max-width: 620px) { .conversation { height:calc(100vh - 86px); padding-bottom:120px; background:color-mix(in srgb, var(--surface-canvas) 88%, transparent); } .message { grid-template-columns:32px minmax(0,1fr); gap:10px; } .bubble { font-size:14px; } .topbar { position:relative; z-index:1; } }
+@media (max-width: 620px) { .companion-intent-bar { left:16px; right:16px; bottom:82px; transform:none; max-width:none; border-radius:14px; padding:7px 8px; } .companion-intent-label { display:none; } .companion-intent-options { width:100%; } .companion-intent { min-height:40px; padding:7px 12px; } }
+@media (max-width: 620px) { .group-info-trigger { top:10px; right:16px; min-height:40px; padding:8px 11px; } .group-info-panel { width:100%; max-height:92vh; border-radius:12px 12px 0 0; } .group-meta-form, .group-section { padding-left:18px; padding-right:18px; } .agent-detail-card summary { min-height:64px; } .agent-detail-actions button { min-height:40px; } }
+@media (max-width: 620px) { .group-chat-identity { top:8px; left:16px; transform:none; width:calc(100% - 82px); max-width:none; min-height:40px; } .workspace-overflow { top:8px; right:16px; } .companion-intent-collapsed { right:58px; bottom:calc(100% + 8px); min-height:40px; } .companion-intent-bar { right:8px; bottom:calc(100% + 8px); left:8px; max-width:none; border-radius:14px; } }
 @media (max-width: 1100px) and (min-width: 621px) { .app-shell { grid-template-columns:240px minmax(0,1fr); } .inspector { display:none; } .model-dock { top:112px; right:28px; max-width:calc(100vw - 296px); } .main-panel { padding-top:58px; } .conversation { height:calc(100vh - 162px); } }
 
 /* ===== 对话区布局修正:固定三段式,输入框锁底,自动滚动 ===== */
@@ -720,7 +774,7 @@ h1, h2, .brand strong, .empty-state h2, .inspector h2, .settings-header h2, .bub
 /* ==================== 移动端适配 ==================== */
 @media (max-width: 620px) {
   /* 去掉桌面"窗口"造型，改为全屏 */
-  .app-shell { width:100%; height:100vh; max-height:100vh; min-height:0; margin:0; border-radius:0; box-shadow:none; }
+  .app-shell { width:100%; height:100dvh; min-height:100vh; max-height:none; margin:0; border-radius:0; box-shadow:none; }
 
   /* 左侧竖排导航 → 底部横排标签栏 */
   .aube-nav {
@@ -738,9 +792,9 @@ h1, h2, .brand strong, .empty-state h2, .inspector h2, .settings-header h2, .bub
   .aube-nav-lbl { font-size:9px; }
 
   /* 主面板：顶部给时钟留空，底部给导航让位 */
-  .main-panel { padding-left:0; padding-right:0; padding-top:44px; padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px)); }
-  .conversation { width:100%; margin:0 0 12px; padding:18px 14px 96px; border-radius:var(--app-radius, 24px); }
-  .composer { width:100%; margin:0; border-radius:var(--app-radius, 24px); box-shadow:none; border-top:1px solid var(--border-default); }
+  .main-panel { height:100%; max-height:none; padding-left:0; padding-right:0; padding-top:54px; padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .conversation { width:100%; height:auto; min-height:0; margin:0 0 12px; padding:18px 14px 28px; border-radius:var(--app-radius, 24px); }
+  .composer { width:100%; margin:0; padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px)); border-radius:var(--app-radius, 24px); box-shadow:none; border-top:1px solid var(--border-default); }
   .channel-bar { padding:8px 10px; }
 
   /* Aube 页面：全宽 + 底部给导航留白 */
@@ -759,7 +813,6 @@ h1, h2, .brand strong, .empty-state h2, .inspector h2, .settings-header h2, .bub
 
   /* 悬浮元素上移，避开底部导航 */
   .quick-actions { right:14px; bottom:calc(122px + env(safe-area-inset-bottom, 0px)); }
-  .window-dock { bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
   .aube-minimize-btn { bottom:calc(70px + env(safe-area-inset-bottom, 0px)); }
 
   /* 设置窗口：压缩顶部区域 */
