@@ -22,7 +22,9 @@ const server = http.createServer(async (req, res) => {
   try {
     const stat = await fs.stat(file);
     const target = stat.isDirectory() ? path.join(file, 'index.html') : file;
-    res.writeHead(200, { 'Content-Type': types[path.extname(target)] || 'application/octet-stream', 'Cache-Control': path.extname(target) === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable', ...securityHeaders });
+    const isHtml = path.extname(target) === '.html';
+    const isServiceWorker = path.basename(target) === 'sw.js';
+    res.writeHead(200, { 'Content-Type': types[path.extname(target)] || 'application/octet-stream', 'Cache-Control': isHtml || isServiceWorker ? 'no-store' : 'public, max-age=31536000, immutable', ...securityHeaders });
     res.end(await fs.readFile(target));
   } catch {
     res.writeHead(200, { 'Content-Type': types['.html'], 'Cache-Control': 'no-cache', ...securityHeaders });

@@ -811,6 +811,6 @@ createRoot(document.getElementById('root')).render(<AppErrorBoundary><WorkspaceP
 // PWA：仅在构建产物中注册 Service Worker（开发模式避免干扰 HMR）
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => { /* SW 注册失败不影响主流程 */ });
+    navigator.serviceWorker.register('/sw.js?v=20260822-cache-fix').catch(() => { /* SW 注册失败不影响主流程 */ });
   });
 }

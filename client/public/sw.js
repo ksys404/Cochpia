@@ -1,5 +1,5 @@
 // Cochpia Service Worker：静态资源缓存优先，API 网络优先、失败回退缓存
-const CACHE = 'cochpia-v20';
+const CACHE = 'cochpia-v21';
 const CORE = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', event => {
@@ -22,6 +22,24 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+
+  // HTML is the version entry point: always prefer the network so a new
+  // deployment is visible immediately, while retaining an offline fallback.
+  const acceptsHtml = request.headers.get('accept')?.includes('text/html');
+  if (request.mode === 'navigate' || acceptsHtml || url.pathname === '/sw.js') {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then(response => {
+          if (response.ok && url.pathname !== '/sw.js') {
+            const clone = response.clone();
+            caches.open(CACHE).then(cache => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
   // API 请求：网络优先，失败回退缓存（保证弱网时也能看到上次内容）
   if (url.pathname.startsWith('/api/')) {
