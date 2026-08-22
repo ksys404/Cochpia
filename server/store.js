@@ -3,9 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { resolveDbSsl } from './db-ssl.js';
+import { createMemoryModuleState } from './memory-module.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.join(root, 'data');
+const dataDir = path.resolve(process.env.COCHPIA_DATA_DIR || path.join(root, 'data'));
 const stateFile = path.join(dataDir, 'state.json');
 const storageProvider = String(process.env.STORAGE_PROVIDER || 'json').toLowerCase();
 const { Pool } = pg;
@@ -66,9 +67,7 @@ const initialState = {
   messages: {
     welcome: [{ id: 'm-1', role: 'assistant', content: '你好，我是 Cochpia。这里会记录我们共同经历过的事，也会把变化保留成可以查看的证据。今天想从哪里开始？', createdAt: new Date().toISOString() }]
   },
-  memories: [
-    { id: 'mem-1', type: 'relationship', summary: 'Cochpia 正在与用户建立一段可持续、可回溯的关系。', confidence: 0.94, source: 'system', visibility: 'shared', strength: 0.82, importance: 0.9, valence: 0.6, arousal: 0.4, updatedAt: new Date().toISOString() }
-  ],
+  memoryModule: createMemoryModuleState(),
   personality: {
     version: 1,
     traits: [{ key: 'curiosity', label: '好奇心', value: 0.74 }, { key: 'warmth', label: '温度感', value: 0.68 }, { key: 'caution', label: '谨慎度', value: 0.42 }],

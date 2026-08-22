@@ -10,6 +10,16 @@
     "build": "vite build",
     "start": "node server/index.js",
     "start:web": "node services/web-static.js",
+    "start:memory-module": "node services/memory-module/index.js",
+    "test:memory-postgres": "node scripts/memory-module-postgres-smoke.js",
+    "test:memory-postgres-acceptance": "node scripts/memory-module-postgres-acceptance.js",
+    "benchmark:memory-postgres": "node scripts/memory-module-postgres-benchmark.js",
+    "test:memory-sdk": "node scripts/memory-module-sdk-smoke.js",
+    "check:memory-recovery": "node scripts/memory-module-recovery-check.js",
+    "migrate:memory-pgvector": "node scripts/memory-module-pgvector-migrate.js",
+    "benchmark:memory": "node scripts/memory-module-benchmark.js",
+    "evaluate:memory": "node scripts/memory-module-evaluate.js",
+    "evaluate:memory-synthetic": "node scripts/memory-module-synthetic-evaluation.js",
     "migrate:postgres": "node server/migrate-json-to-postgres.js"
   },
   "dependencies": {
@@ -23,6 +33,7 @@
     "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",
+    "redis": "^5.12.1",
     "vite": "latest"
   }
 }
