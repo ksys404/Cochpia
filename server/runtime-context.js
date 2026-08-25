@@ -1,6 +1,17 @@
 const MAX_CONTEXT_MESSAGES = 20;
 
-export function buildRuntimeContext({ messages = [], personality = null, recalled = [], memoryBundle = null, summary = '', persona = '', upcomingEvents = [], atmosphere = '', profile = null, mode = 'companion', companionIntent = 'listen' } = {}) {
+const cloneRecord = value => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  try {
+    const cloned = structuredClone(value);
+    JSON.stringify(cloned);
+    return cloned;
+  } catch {
+    return { truncated: true };
+  }
+};
+
+export function buildRuntimeContext({ messages = [], personality = null, recalled = [], memoryBundle = null, summary = '', persona = '', upcomingEvents = [], atmosphere = '', profile = null, mode = 'companion', currentState = null, turn = null, responsePlan = null, policy = null } = {}) {
   return {
     messages: messages.filter(message => !message.supersededAt).slice(-MAX_CONTEXT_MESSAGES).map(message => ({
       id: message.id,
@@ -32,7 +43,10 @@ export function buildRuntimeContext({ messages = [], personality = null, recalle
     })),
     profile: profile ? { name: profile.name, gender: profile.gender, age: profile.age } : null,
     mode: String(mode || 'companion'),
-    companionIntent: String(companionIntent || 'listen')
+    currentState: cloneRecord(currentState),
+    turn: cloneRecord(turn),
+    responsePlan: cloneRecord(responsePlan),
+    policy: cloneRecord(policy)
   };
 }
 

@@ -32,3 +32,13 @@ export function validateAuthStorage(storageProvider) {
     );
   }
 }
+
+export function validateProductionAuth({ nodeEnv = process.env.NODE_ENV, mode = authMode() } = {}) {
+  if (String(nodeEnv || '').toLowerCase() !== 'production') return;
+  if (String(mode || '').toLowerCase() !== 'required') {
+    throw Object.assign(
+      new Error('AUTH_MODE=required is required in production'),
+      { code: 'AUTH_PRODUCTION_CONFIGURATION_INVALID', status: 503 }
+    );
+  }
+}
