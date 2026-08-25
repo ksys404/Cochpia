@@ -5,10 +5,11 @@ import { createClient } from 'redis';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveDbSsl } from '../../server/db-ssl.js';
+import { resolveDbSsl, validateProductionDbTls } from '../../server/db-ssl.js';
 import { MemoryModuleError, createMemoryModule, createMemoryModuleState } from '../../server/memory-module.js';
 import { createMemoryModuleRouter } from '../../server/memory-module-api.js';
 import { createMemoryModulePostgresRepository } from '../../server/memory-module-postgres.js';
+import { applyMemoryModuleSchema } from '../../server/memory-module-pg-migration.js';
 import { buildPgvectorMigrationSql, normalizeEmbeddingDimensions } from '../../server/memory-module-pgvector.js';
 import { createMemoryModuleServiceWorker } from '../../server/memory-module-service-worker.js';
 import { createMemoryModelGateway } from '../../server/memory-module-model-gateway.js';
@@ -18,15 +19,23 @@ import { createMemoryModuleCache } from '../../server/memory-module-cache.js';
 import { routeMemoryQuery } from '../../server/memory-module-query-router.js';
 import { resolveMemoryFeatureFlags } from '../../server/memory-module-flags.js';
 import { createObservability } from '../../server/observability.js';
+import { DEFAULT_SERVICE_AUTH_AUDIENCE, DEFAULT_SERVICE_AUTH_ISSUER, createNonceReplayGuard, validateServiceAuthConfig, verifyServiceAuth } from '../../server/service-auth.js';
 
 const { Pool } = pg;
 const app = express();
 const port = Number(process.env.MEMORY_MODULE_PORT || process.env.PORT || 8791);
 const serviceToken = process.env.MEMORY_MODULE_SERVICE_TOKEN || '';
+const serviceAuthConfig = validateServiceAuthConfig({
+  nodeEnv: process.env.NODE_ENV,
+  token: serviceToken,
+  mode: process.env.MEMORY_MODULE_SERVICE_AUTH_MODE,
+  audience: process.env.MEMORY_MODULE_SERVICE_AUDIENCE || DEFAULT_SERVICE_AUTH_AUDIENCE,
+  issuer: process.env.MEMORY_MODULE_SERVICE_ISSUER || DEFAULT_SERVICE_AUTH_ISSUER
+});
+const serviceAuthMaxSkewMs = Number(process.env.MEMORY_MODULE_SERVICE_AUTH_MAX_SKEW_MS || 30_000);
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required for the independent Memory Module service');
-if (process.env.NODE_ENV === 'production' && !serviceToken) throw new Error('MEMORY_MODULE_SERVICE_TOKEN is required in production');
-if (process.env.NODE_ENV === 'production' && !['true', 'require', 'verify-full'].includes(String(process.env.DATABASE_SSL || '').toLowerCase())) throw new Error('DATABASE_SSL=true or verify-full is required in production');
+validateProductionDbTls({ storageProvider: 'postgres' });
 
 const pool = new Pool({
   connectionString,
@@ -36,6 +45,30 @@ const pool = new Pool({
   query_timeout: Number(process.env.DATABASE_QUERY_TIMEOUT_MS || 15000),
   max: Number(process.env.MEMORY_MODULE_POOL_MAX || 10)
 });
+if (serviceAuthConfig.mode === 'signed') {
+  await pool.query('CREATE TABLE IF NOT EXISTS memory_service_auth_nonces (nonce text PRIMARY KEY, expires_at timestamptz NOT NULL)');
+}
+const localNonceGuard = serviceAuthConfig.mode === 'signed' ? createNonceReplayGuard({ maxEntries: 10_000 }) : null;
+const consumeServiceNonce = serviceAuthConfig.mode !== 'signed'
+  ? null
+  : async (nonce, expiresAt) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM memory_service_auth_nonces WHERE expires_at <= now()');
+      const result = await client.query(
+        'INSERT INTO memory_service_auth_nonces (nonce, expires_at) VALUES ($1,$2::timestamptz) ON CONFLICT (nonce) DO NOTHING RETURNING nonce',
+        [nonce, new Date(expiresAt).toISOString()]
+      );
+      await client.query('COMMIT');
+      return Boolean(result.rows[0]);
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  };
 let redisClient = null;
 let memoryCache = null;
 if (process.env.MEMORY_MODULE_REDIS_URL) {
@@ -99,16 +132,37 @@ app.use((_, res, next) => {
   next();
 });
 app.use(observability.middleware);
-app.use((req, res, next) => {
-  if (serviceToken && req.get('authorization') !== `Bearer ${serviceToken}`) return res.status(401).json({ error: { code: 'MEMORY_MODULE_UNAUTHORIZED', message: 'Invalid service authorization' } });
-  next();
+app.use(async (req, res, next) => {
+  try {
+    const verification = await verifyServiceAuth({
+      headers: req.headers,
+      method: req.method,
+      path: req.originalUrl,
+      expectedToken: serviceToken,
+      mode: serviceAuthConfig.mode,
+      audience: serviceAuthConfig.audience,
+      issuer: serviceAuthConfig.issuer,
+      maxSkewMs: serviceAuthMaxSkewMs,
+      consumeNonce: async (nonce, expiresAt) => {
+        if (!consumeServiceNonce) return true;
+        const locallyFresh = await localNonceGuard(nonce, expiresAt);
+        if (!locallyFresh) return false;
+        return consumeServiceNonce(nonce, expiresAt);
+      }
+    });
+    if (verification.context) req.memoryServiceContext = verification.context;
+    return next();
+  } catch (error) {
+    return res.status(error.status || 401).json({ error: { code: error.code || 'MEMORY_MODULE_UNAUTHORIZED', message: error.status === 503 ? error.message : 'Invalid service authorization' } });
+  }
 });
 
 const contextFromRequest = req => {
-  const tenantId = String(req.get('x-memory-tenant-id') || '').trim();
-  const subjectUserId = String(req.get('x-memory-user-id') || req.get('x-subject-user-id') || '').trim();
-  const actorType = String(req.get('x-memory-actor-type') || 'agent').trim();
-  const callerAgentId = String(req.get('x-memory-agent-id') || req.get('x-caller-agent-id') || '').trim();
+  const trusted = req.memoryServiceContext || {};
+  const tenantId = String(trusted.tenantId || req.get('x-memory-tenant-id') || '').trim();
+  const subjectUserId = String(trusted.subjectUserId || req.get('x-memory-user-id') || req.get('x-subject-user-id') || '').trim();
+  const actorType = String(trusted.actorType || req.get('x-memory-actor-type') || 'agent').trim();
+  const callerAgentId = String(trusted.callerAgentId || req.get('x-memory-agent-id') || req.get('x-caller-agent-id') || '').trim();
   if (!tenantId || !subjectUserId || !callerAgentId) throw new MemoryModuleError('MEMORY_CONTEXT_REQUIRED', 'Trusted tenant, subject user, and caller agent context are required', { status: 400 });
   return {
     tenantId,
@@ -181,8 +235,10 @@ app.use('/v1', createMemoryModuleRouter({ memoryModuleForRequest, contextFromReq
 
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../server/memory-module-schema.sql');
 if (process.env.MEMORY_MODULE_AUTO_MIGRATE === 'true') {
-  await pool.query(await readFile(schemaPath, 'utf8'));
-  if (pgvectorEnabled) await pool.query(buildPgvectorMigrationSql(normalizeEmbeddingDimensions(process.env.MEMORY_MODULE_EMBEDDING_DIMENSIONS)));
+  await applyMemoryModuleSchema(pool, {
+    schema: await readFile(schemaPath, 'utf8'),
+    pgvectorSql: pgvectorEnabled ? buildPgvectorMigrationSql(normalizeEmbeddingDimensions(process.env.MEMORY_MODULE_EMBEDDING_DIMENSIONS)) : ''
+  });
 }
 if (pgvectorEnabled) {
   const vectorReady = await pool.query(`

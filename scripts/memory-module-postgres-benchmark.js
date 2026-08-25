@@ -10,6 +10,7 @@ import { resolveDbSsl } from '../server/db-ssl.js';
 import { buildPgvectorMigrationSql, normalizeEmbeddingDimensions } from '../server/memory-module-pgvector.js';
 import { createMemoryModuleNativeRetriever } from '../server/memory-module-native-retrieval.js';
 import { createMemoryModulePostgresRepository } from '../server/memory-module-postgres.js';
+import { applyMemoryModuleSchema } from '../server/memory-module-pg-migration.js';
 
 if (!process.env.DATABASE_URL) {
   console.log(JSON.stringify({ event: 'memory_module_postgres_benchmark_skipped', reason: 'DATABASE_URL_not_configured' }));
@@ -29,7 +30,11 @@ const userCount = Math.max(2, Math.min(512, Number(process.env.MEMORY_BENCHMARK_
 const usePgvector = process.env.MEMORY_MODULE_BENCHMARK_PGVECTOR === 'true';
 const rebuildHnswAfterSeed = usePgvector && process.env.MEMORY_MODULE_BENCHMARK_REBUILD_HNSW === 'true';
 const applySchema = process.env.MEMORY_MODULE_BENCHMARK_APPLY_SCHEMA === 'true';
+const fastSeed = process.env.MEMORY_MODULE_BENCHMARK_FAST_SEED === 'true';
+const leanIndex = usePgvector && process.env.MEMORY_MODULE_BENCHMARK_LEAN_INDEX === 'true';
+const vacuumCleanup = process.env.MEMORY_MODULE_BENCHMARK_VACUUM_CLEANUP === 'true';
 const dimensions = normalizeEmbeddingDimensions(process.env.MEMORY_MODULE_EMBEDDING_DIMENSIONS || 2);
+const assertionCount = leanIndex ? Math.max(1, Math.min(documentCount, Number(process.env.MEMORY_BENCHMARK_ASSERTIONS || 10_000))) : documentCount;
 const runId = randomUUID();
 const tenantPrefix = `memory-benchmark-${runId}-`;
 const idPrefix = `benchmark-${runId}-`;
@@ -47,8 +52,8 @@ const pool = new Pool({
   ssl: resolveDbSsl(),
   max: Math.max(concurrency + 2, Number(process.env.MEMORY_MODULE_BENCHMARK_POOL_MAX || concurrency + 2)),
   connectionTimeoutMillis: Number(process.env.DATABASE_CONNECTION_TIMEOUT_MS || 10_000),
-  statement_timeout: Number(process.env.DATABASE_QUERY_TIMEOUT_MS || 30_000),
-  query_timeout: Number(process.env.DATABASE_QUERY_TIMEOUT_MS || 30_000)
+  statement_timeout: Number(process.env.MEMORY_MODULE_BENCHMARK_QUERY_TIMEOUT_MS || 120_000),
+  query_timeout: Number(process.env.MEMORY_MODULE_BENCHMARK_QUERY_TIMEOUT_MS || 120_000)
 });
 const repository = createMemoryModulePostgresRepository(pool, { pgvector: usePgvector });
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../server/memory-module-schema.sql');
@@ -86,6 +91,11 @@ async function cleanup() {
       'DELETE FROM memory_commit_sequences WHERE tenant_id LIKE $1'
     ]) await client.query(query, [`${tenantPrefix}%`]);
     await client.query('COMMIT');
+    if (vacuumCleanup) {
+      for (const table of ['memory_assertions', 'assertion_versions', 'index_documents']) {
+        await client.query(`VACUUM (FULL, ANALYZE) ${table}`);
+      }
+    }
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -100,6 +110,7 @@ async function seed() {
   try {
     await client.query('BEGIN');
     await client.query('SET LOCAL synchronous_commit = off');
+    if (fastSeed) await client.query('SET LOCAL session_replication_role = replica');
     seedStep = 'assertions';
     await client.query(`
       INSERT INTO memory_assertions (
@@ -119,7 +130,7 @@ async function seed() {
         0.9, 0.5, 'default_s0', 'default', true,
         'mentionable', 'allow', NULL, 1, now(), now()
       FROM generate_series(0, $4::int - 1) AS rows(g)
-    `, [tenantPrefix, tenantCount, userCount, documentCount, idPrefix]);
+    `, [tenantPrefix, tenantCount, userCount, assertionCount, idPrefix]);
     seedStep = 'versions';
     await client.query(`
       INSERT INTO assertion_versions (
@@ -135,7 +146,7 @@ async function seed() {
         '{}'::jsonb, 'plain_text', 'user_explicit', now(), 'current',
         'user', 'benchmark_seed', 'benchmark-v1', now()
       FROM generate_series(0, $3::int - 1) AS rows(g)
-    `, [tenantPrefix, tenantCount, documentCount, idPrefix]);
+    `, [tenantPrefix, tenantCount, assertionCount, idPrefix]);
     seedStep = 'activate';
     await client.query(`
       UPDATE memory_assertions
@@ -144,6 +155,9 @@ async function seed() {
     `, [`${tenantPrefix}%`, idPrefix]);
     if (usePgvector) {
       seedStep = 'index_vector';
+      const sourceVersionExpression = leanIndex
+        ? "$10::text || 'version-' || g::text"
+        : "$10::text || 'version-' || (g % $11::int)::text";
       await client.query(`
         INSERT INTO index_documents (
           id, tenant_id, source_type, source_id, source_version, user_id,
@@ -155,7 +169,7 @@ async function seed() {
         SELECT
           $10::text || 'index-' || g::text,
           $1::text || 'tenant-' || (g % $2::int)::text,
-          'assertion', $10::text || 'assertion-' || g::text, $10::text || 'version-' || g::text,
+          'assertion', $10::text || 'assertion-' || (g % $11::int)::text, ${sourceVersionExpression},
           $1::text || 'user-' || (g % $3::int)::text, 'user',
           'benchmark topic-' || (g % 37)::text || ' red tea tenant-' || (g % $2::int)::text,
           'S0', true, true, 0, $5, 0,
@@ -164,9 +178,12 @@ async function seed() {
           'benchmark-v1', 'bm25-v1', 'active',
           ARRAY['benchmark-source-' || g::text], now()
         FROM generate_series(0, $4::int - 1) AS rows(g)
-      `, [tenantPrefix, tenantCount, userCount, documentCount, policyVersion, jsonVectorA, jsonVectorB, vectorA, vectorB, idPrefix]);
+      `, [tenantPrefix, tenantCount, userCount, documentCount, policyVersion, jsonVectorA, jsonVectorB, vectorA, vectorB, idPrefix, assertionCount]);
     } else {
       seedStep = 'index_lexical';
+      const sourceVersionExpression = leanIndex
+        ? "$8::text || 'version-' || g::text"
+        : "$8::text || 'version-' || (g % $9::int)::text";
       await client.query(`
         INSERT INTO index_documents (
           id, tenant_id, source_type, source_id, source_version, user_id,
@@ -177,15 +194,16 @@ async function seed() {
         SELECT
           $8::text || 'index-' || g::text,
           $1::text || 'tenant-' || (g % $2::int)::text,
-          'assertion', $8::text || 'assertion-' || g::text, $8::text || 'version-' || g::text,
+          'assertion', $8::text || 'assertion-' || (g % $9::int)::text, ${sourceVersionExpression},
           $1::text || 'user-' || (g % $3::int)::text, 'user',
           'benchmark topic-' || (g % 37)::text || ' red tea tenant-' || (g % $2::int)::text,
           'S0', true, true, 0, $5,
+          0,
           CASE WHEN g % 2 = 0 THEN $6::jsonb ELSE $7::jsonb END,
           'benchmark-v1', 'bm25-v1', 'active',
           ARRAY['benchmark-source-' || g::text], now()
         FROM generate_series(0, $4::int - 1) AS rows(g)
-      `, [tenantPrefix, tenantCount, userCount, documentCount, policyVersion, jsonVectorA, jsonVectorB, idPrefix]);
+      `, [tenantPrefix, tenantCount, userCount, documentCount, policyVersion, jsonVectorA, jsonVectorB, idPrefix, assertionCount]);
     }
     await client.query('COMMIT');
   } catch (error) {
@@ -249,8 +267,10 @@ try {
   assert.ok(documentCount >= 1);
   currentStep = 'schema';
   if (applySchema) {
-    await pool.query(await readFile(schemaPath, 'utf8'));
-    if (usePgvector) await pool.query(buildPgvectorMigrationSql(dimensions));
+    await applyMemoryModuleSchema(pool, {
+      schema: await readFile(schemaPath, 'utf8'),
+      pgvectorSql: usePgvector ? buildPgvectorMigrationSql(dimensions) : ''
+    });
   }
   if (usePgvector) {
     const ready = await pool.query(`
@@ -275,6 +295,16 @@ try {
   }
   currentStep = 'analyze';
   await pool.query('ANALYZE memory_assertions; ANALYZE assertion_versions; ANALYZE index_documents');
+  const integrity = await pool.query(`
+    SELECT
+      (SELECT COUNT(*) FROM memory_assertions WHERE tenant_id LIKE $1) AS assertions,
+      (SELECT COUNT(*) FROM assertion_versions WHERE tenant_id LIKE $1) AS versions,
+      (SELECT COUNT(*) FROM index_documents WHERE tenant_id LIKE $1) AS documents,
+      (SELECT COUNT(*) FROM assertion_versions v LEFT JOIN memory_assertions a ON a.tenant_id=v.tenant_id AND a.id=v.assertion_id WHERE v.tenant_id LIKE $1 AND a.id IS NULL) AS orphan_versions,
+      (SELECT COUNT(*) FROM index_documents d LEFT JOIN memory_assertions a ON a.tenant_id=d.tenant_id AND a.id=d.source_id WHERE d.tenant_id LIKE $1 AND a.id IS NULL) AS orphan_documents
+  `, [`${tenantPrefix}%`]);
+  assert.equal(Number(integrity.rows[0]?.orphan_versions || 0), 0, 'benchmark version referential integrity');
+  assert.equal(Number(integrity.rows[0]?.orphan_documents || 0), 0, 'benchmark document referential integrity');
   currentStep = 'requests';
   const metrics = await runRequests();
   if (metrics.failures.length) throw new Error(`benchmark query failures: ${metrics.failures.join(',')}`);
@@ -284,7 +314,14 @@ try {
     documentCount,
     requestCount,
     concurrency,
+    assertionCount,
+    embeddingDimensions: dimensions,
+    pgvector: usePgvector,
+    queryTimeoutMs: Number(process.env.MEMORY_MODULE_BENCHMARK_QUERY_TIMEOUT_MS || 120_000),
     hnswRebuiltAfterSeed: rebuildHnswAfterSeed,
+    fastSeed,
+    leanIndex,
+    referentialIntegrity: { orphanVersions: 0, orphanDocuments: 0 },
     tenantCount,
     userCount,
     filteredCandidateEstimate: Math.ceil(documentCount / tenantCount / userCount),

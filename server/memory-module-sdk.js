@@ -1,3 +1,5 @@
+import { buildServiceAuthHeaders } from './service-auth.js';
+
 export class MemoryModuleClientError extends Error {
   constructor(message, { code = 'MEMORY_MODULE_REQUEST_FAILED', status = 0, body = null } = {}) {
     super(message);
@@ -8,14 +10,16 @@ export class MemoryModuleClientError extends Error {
   }
 }
 
-export function createMemoryModuleClient({ baseUrl = '', fetchImpl = globalThis.fetch, headers = {}, getHeaders = () => ({}) } = {}) {
+export function createMemoryModuleClient({ baseUrl = '', fetchImpl = globalThis.fetch, headers = {}, getHeaders = () => ({}), serviceAuth = null } = {}) {
   if (typeof fetchImpl !== 'function') throw new TypeError('fetchImpl is required');
   const request = async (path, { method = 'GET', body, query, idempotencyKey } = {}) => {
     const url = new URL(path, baseUrl || 'http://memory-module.invalid');
     if (query) for (const [key, value] of Object.entries(query)) if (value != null) url.searchParams.set(key, String(value));
+    const configuredServiceAuth = typeof serviceAuth === 'function' ? serviceAuth({ method, path: `${url.pathname}${url.search}`, body }) : serviceAuth;
+    const serviceHeaders = configuredServiceAuth ? buildServiceAuthHeaders({ ...configuredServiceAuth, method, path: `${url.pathname}${url.search}` }) : {};
     const response = await fetchImpl(url.toString(), {
       method,
-      headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(idempotencyKey ? { 'Idempotency-Key': String(idempotencyKey) } : {}), ...headers, ...getHeaders() },
+      headers: { Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(idempotencyKey ? { 'Idempotency-Key': String(idempotencyKey) } : {}), ...headers, ...getHeaders(), ...serviceHeaders },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {})
     });
     const payload = response.status === 204 ? null : await response.json().catch(() => null);
@@ -43,6 +47,9 @@ export function createMemoryModuleClient({ baseUrl = '', fetchImpl = globalThis.
     forgetMemory: (id, body, options = {}) => request(`/v1/memories/${encodeURIComponent(id)}/forget`, { method: 'POST', body, idempotencyKey: options.idempotencyKey }),
     forgetTarget: (body, options = {}) => request('/v1/governance/forget', { method: 'POST', body, idempotencyKey: options.idempotencyKey }),
     deleteMemory: (id, body, options = {}) => request(`/v1/memories/${encodeURIComponent(id)}`, { method: 'DELETE', body, idempotencyKey: options.idempotencyKey }),
+    createExportOperation: (body = {}, options = {}) => request('/v1/export-operations', { method: 'POST', body, idempotencyKey: options.idempotencyKey }),
+    getExportOperation: id => request(`/v1/export-operations/${encodeURIComponent(id)}`),
+    downloadExport: id => request(`/v1/export-operations/${encodeURIComponent(id)}/data`),
     listConfirmations: query => request('/v1/confirmations', { query }),
     confirmMemory: (id, body, options = {}) => request(`/v1/confirmations/${encodeURIComponent(id)}/confirm`, { method: 'POST', body, idempotencyKey: options.idempotencyKey }),
     rejectMemory: (id, body, options = {}) => request(`/v1/confirmations/${encodeURIComponent(id)}/reject`, { method: 'POST', body, idempotencyKey: options.idempotencyKey }),

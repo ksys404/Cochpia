@@ -1,6 +1,7 @@
 node_modules/
 dist/
 server/data/
+artifacts/
 .env
 work/
 *.7z

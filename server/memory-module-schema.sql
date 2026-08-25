@@ -553,6 +553,23 @@ CREATE TABLE IF NOT EXISTS memory_tombstones (
   UNIQUE (tenant_id, target_type, target_id, action, redaction_epoch)
 );
 
+CREATE TABLE IF NOT EXISTS memory_export_operations (
+  id text PRIMARY KEY,
+  tenant_id text NOT NULL,
+  subject_user_id text NOT NULL,
+  status text NOT NULL CHECK (status IN ('ready', 'stale', 'expired')),
+  source_commit_seq bigint NOT NULL,
+  operation_commit_seq bigint NOT NULL,
+  requested_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz NOT NULL,
+  expires_at timestamptz NOT NULL,
+  resource_revision bigint NOT NULL DEFAULT 1,
+  UNIQUE (tenant_id, id)
+);
+
+CREATE INDEX IF NOT EXISTS memory_export_operations_subject_idx
+  ON memory_export_operations (tenant_id, subject_user_id, requested_at DESC);
+
 CREATE TABLE IF NOT EXISTS redaction_epochs (
   tenant_id text NOT NULL,
   user_id text NOT NULL,
@@ -583,6 +600,7 @@ CREATE TABLE IF NOT EXISTS memory_outbox_events (
   lease_until timestamptz,
   attempts integer NOT NULL DEFAULT 0,
   last_error_code text,
+  next_attempt_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   delivered_at timestamptz
 );
@@ -591,11 +609,13 @@ ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS lease_owner text;
 ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS lease_until timestamptz;
 ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS attempts integer NOT NULL DEFAULT 0;
 ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS last_error_code text;
+ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz;
 ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS user_id text;
 ALTER TABLE memory_outbox_events ADD COLUMN IF NOT EXISTS consumer_name text NOT NULL DEFAULT 'memory-derived';
 ALTER TABLE index_documents ADD COLUMN IF NOT EXISTS embedding jsonb;
 
 CREATE INDEX IF NOT EXISTS memory_outbox_pending_idx ON memory_outbox_events (status, created_at);
+CREATE INDEX IF NOT EXISTS memory_outbox_due_idx ON memory_outbox_events (status, next_attempt_at, created_at);
 CREATE INDEX IF NOT EXISTS memory_outbox_subject_pending_idx ON memory_outbox_events (tenant_id, user_id, status, created_at);
 
 CREATE TABLE IF NOT EXISTS memory_audit_events (
@@ -606,6 +626,12 @@ CREATE TABLE IF NOT EXISTS memory_audit_events (
   action text NOT NULL,
   details jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Service-auth nonce replay protection is control-plane metadata, not memory content.
+CREATE TABLE IF NOT EXISTS memory_service_auth_nonces (
+  nonce text PRIMARY KEY,
+  expires_at timestamptz NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS memory_idempotency_records (

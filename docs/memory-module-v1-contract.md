@@ -8,7 +8,7 @@ The new contract is exposed below `/v1`. The existing `/api/memories` endpoints 
 
 The V1 service owns memory data behind an API boundary. Callers provide an authenticated subject context; `tenant_id` and `user_id` in request bodies are validated against that context and cannot replace it.
 
-The executable SDK smoke `npm run test:memory-sdk` exercises the first external caller chain (create → retrieve → ContextBundle → forget → negative retrieve) when `MEMORY_MODULE_URL`, `MEMORY_MODULE_SDK_TENANT_ID`, and `MEMORY_MODULE_SDK_USER_ID` are configured. It is skipped without those variables and does not claim success for an unavailable service.
+The executable SDK smoke `npm run test:memory-sdk` exercises the first external caller chain (create → retrieve → ContextBundle → create/status/download export snapshot → forget → negative retrieve) when `MEMORY_MODULE_URL`, `MEMORY_MODULE_SDK_TENANT_ID`, and `MEMORY_MODULE_SDK_USER_ID` are configured. It is skipped without those variables and does not claim success for an unavailable service.
 
 ## Implemented endpoints
 
@@ -38,6 +38,9 @@ The executable SDK smoke `npm run test:memory-sdk` exercises the first external 
 | POST | `/v1/mentions` | Record an actually emitted proactive mention and apply a bounded Agent/topic cooldown |
 | POST | `/v1/sessions/{id}/current-state` | Write a TTL-bound session state |
 | GET | `/v1/deletion-operations/{id}` | Query deletion propagation status |
+| POST | `/v1/export-operations` | Create a subject-bound Memory Module export snapshot operation |
+| GET | `/v1/export-operations/{id}` | Query export operation status (`ready`, `stale`, or `expired`) |
+| GET | `/v1/export-operations/{id}/data` | Download a fixed-commit export snapshot when it is not stale or expired |
 
 ## Policy baseline
 
@@ -52,7 +55,7 @@ The executable SDK smoke `npm run test:memory-sdk` exercises the first external 
 - Relationship memory is visible only to the exact `(tenant_id, user_id, agent_id)` relationship.
 - Session state requires an expiry and is stored separately from long-term assertions.
 - Session-scoped assertions are hard-filtered to their exact active session; they are not visible through ordinary user-scope reads, and the in-process domain exposes `sweepRetention` for deterministic TTL/retention cleanup.
-- A session creates a stable profile snapshot of active user/relationship versions; each Bundle rechecks current lifecycle, privacy epoch, and grants before returning snapshot content.
+- A session creates a stable profile snapshot of active user/relationship versions; each Bundle rechecks current lifecycle, privacy epoch, and grants before returning snapshot content. Query-authorized canonical matches may enter the same Bundle through `relevantMemories` without mutating the stable snapshot, so explicit chat writes remain read-your-write visible on the next turn.
 - Correct/revoke/forget/delete/pin operations require `resource_revision`.
 - A correction that classifies as S2 creates a proposed version and keeps the previous current version until confirmation; the confirmation is bound to the assertion revision. S1 corrections remain current-state-only.
 - Memory content is returned as data and carries no instruction semantics.
@@ -62,7 +65,10 @@ The executable SDK smoke `npm run test:memory-sdk` exercises the first external 
 - Retrieval and ContextBundle return a deterministic `queryRoute` hint (`profile_exact`, `state_current`, `episode_recall`, `relationship_recall`, `bridge_candidate`, or `unknown`) for downstream routing and evaluation; the hint never bypasses Scope or policy filters.
 - Mutation endpoints accept `Idempotency-Key` or `idempotency_key`. The key is scoped by tenant, subject user, actor, and mutation namespace, retained for 24 hours by default, and bound to a canonical request fingerprint. Reusing a key with a different payload returns `IDEMPOTENCY_CONFLICT`; successful responses are replayed without creating a second resource. Event ingestion keeps its separate `event_id + source_revision` contract.
 - Mutation idempotency records retain only safe response copies. S3 or `do_not_store` inputs are never fingerprinted or copied into an idempotency response, and content-bearing replay records are invalidated when their memory/source/session is forgotten or deleted.
+- Export operations are user-governance mutations, are tenant/subject bound, and store only operation metadata. The downloaded snapshot is fixed to the operation commit sequence; canonical changes return `EXPORT_SNAPSHOT_STALE` instead of mixing revisions, and expired metadata is removed by retention sweep.
 
 ## Known first-slice limits
 
 The first slice uses deterministic BM25 retrieval and an in-process state adapter so the contract can be tested without external services. PostgreSQL DDL is included in `server/memory-module-schema.sql`; the repository and independent service now persist the canonical tables with a per-subject commit sequence guard. The independent service has a database-leased worker path for extraction, profile projection, lexical index rebuild, and episode grouping; each remains behind its own feature flag. Async hybrid/vector retrieval is now wired to the injected embedding gateway with BM25 fallback. The extraction path defaults to a safe heuristic gateway and accepts an injected structured model gateway without weakening the canonical policy checks. Physical delete is implemented for memory, source event, session, relationship, and account targets while retaining only a minimal deletion ledger.
+
+The Memory Module export endpoints cover the module's canonical and derived snapshot only. The main application now exposes subject-bound product export operations at `POST /api/export-operations`, `GET /api/export-operations/{id}`, and `GET /api/export-operations/{id}/data`; the returned versioned manifest composes application messages, personality/relationship projections, LifeState, tasks, events, preferences, Memory Module data, and reconciliation evidence. Its inventory explicitly marks caches, logs, backups/PITR, and external model-provider copies as metadata-only or excluded obligations. Those entries still require real operator/provider retention, recovery replay, and audit evidence before the Alpha/production gates can be marked complete.

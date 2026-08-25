@@ -47,3 +47,9 @@ test('episode rebuild ignores non-final stream events', () => {
   state.rawEvents.push({ id: 'draft-event', tenantId: 'tenant-a', userId: 'user-a', sessionId: null, isStreamFinal: false, occurredAt: '2026-08-22T00:00:00.000Z', content: '草稿事件' });
   assert.deepEqual(rebuildEpisodes(state, { tenantId: 'tenant-a', userId: 'user-a' }), []);
 });
+
+test('episode rebuild excludes do-not-mention events', () => {
+  const state = createMemoryModuleState();
+  state.rawEvents.push({ id: 'raw-private', tenantId: 'tenant-a', userId: 'user-a', content: 'private', occurredAt: '2026-08-24T00:00:00.000Z', isStreamFinal: true, metadata: { privacy_directive: 'do_not_mention' } });
+  assert.deepEqual(rebuildEpisodes(state, { tenantId: 'tenant-a', userId: 'user-a' }), []);
+});

@@ -12,6 +12,7 @@
 | current state | 必须有 `expires_at` | 过期后不进入 Stable Profile 或长期检索 |
 | profile snapshot/projection | 可从 canonical 重建 | forget/delete 后不能成为可见副本 |
 | proactive mention cooldown | 仅保存 memory/agent/topic 标识与时间，不保存正文 | 随 memory、relationship、session 或 account 删除；过期 sweep 清理 |
+| export operation metadata | 默认 1 小时，按 subject 绑定 | 只保存 snapshot sequence、状态和时间；不复制 canonical 正文；account delete 一并清理 |
 | index/vector/episode | 派生物 | canonical mutation 成功后立即回源不可见，异步物理清理目标 p99 ≤ 60 秒 |
 | audit/deletion ledger | 只保留治理所需最小元数据 | 不保存用户正文、secret 或模型原文 |
 | backups/PITR | V1 默认最长 35 天 | 恢复开放流量前必须重放独立删除账本 |
@@ -23,6 +24,7 @@
 - `delete`：指定 memory、source event、session、relationship 或 account 的 canonical 数据物理删除；返回 `deletion_operation_id`。
 - `do_not_store`：入口判定后不写 raw event、outbox、模型任务、向量或普通日志；响应不回显检测到的 secret。
 - `do_not_mention`：仍可按权限检索，但主动提及过滤；`direct_query_policy=deny` 时即使用户直接询问也不能返回。
+- `export`：先创建 subject-bound export operation，再下载固定 commit sequence 的快照；若 canonical sequence 变化，下载返回 `EXPORT_SNAPSHOT_STALE`，不得静默混合新旧数据；过期 operation 返回 `EXPORT_OPERATION_EXPIRED`。
 
 ## Delete 传播
 
@@ -34,4 +36,8 @@
 
 ## 当前实现边界
 
-Memory domain 已实现 memory/source/session/relationship/account 的物理 delete，独立 API 暴露 `/v1/governance/delete`，并提供 `sweepRetention` 对过期 raw event、session assertion/current state、confirmation 和 mutation idempotency record 做确定性清理或失效处理。PostgreSQL repository 已按 user-scoped outbox 清理；新增 `check:memory-recovery` 可对恢复 artifact 执行 tombstone replay 与负向泄漏检查。真实 PostgreSQL 调度、级联、备份/PITR 和删除延迟仍需环境演练后才可标记为已验收。
+Memory domain 已实现 memory/source/session/relationship/account 的物理 delete，独立 API 暴露 `/v1/governance/delete`，并提供 `sweepRetention` 对过期 raw event、session assertion/current state、confirmation、export operation 和 mutation idempotency record 做确定性清理或失效处理。PostgreSQL repository 已按 user-scoped outbox 清理；新增 `check:memory-recovery` 可对恢复 artifact 执行 tombstone replay 与负向泄漏检查。真实 PostgreSQL 调度、级联、备份/PITR 和删除延迟仍需环境演练后才可标记为已验收。
+
+导出 API (`/v1/export-operations`) 只负责 Memory Module 的 subject-bound canonical/derived snapshot。主应用现在提供同样固定快照语义的 `POST /api/export-operations`、`GET /api/export-operations/{id}` 和 `GET /api/export-operations/{id}/data`，其下载 manifest 组合聊天消息、人格/关系投影、LifeState、任务、事件、工作区设置、Memory Module 快照和 reconciliation 结果；旧 `GET /api/export` 保留为兼容入口并创建一次性 operation。应用级 operation 只保存元数据，产品本地 data revision 或 Memory commit sequence 变化时 fail-closed 为 `EXPORT_SNAPSHOT_STALE`，过期返回 `EXPORT_OPERATION_EXPIRED`。
+
+产品级 manifest 同时列出缓存、日志、备份/PITR 和外部模型供应商副本的 owner、导出范围、删除动作和验证方式。日志、备份和供应商侧删除仍是 operator/provider obligation；当前实现不会把它们伪装成应用已经完成的物理擦除，必须以真实 retention、PITR/recovery 和供应商审计证据关闭对应门禁。

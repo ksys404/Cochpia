@@ -77,3 +77,69 @@ test('Memory Module compatibility remove is idempotent at the boundary', async (
   assert.equal(await compatibility.remove(created.id), true);
   assert.equal(await compatibility.remove(created.id), false);
 });
+
+test('Memory Module compatibility adapter exposes candidate, confirmation, pin, correction, forget, and lifecycle replay', async () => {
+  const state = { memoryModule: createMemoryModuleState() };
+  const runtime = createMemoryModuleRuntime({ getState: () => state });
+  const compatibility = runtime.compatibilityForRequest(request);
+  const module = runtime.moduleForRequest(request);
+  const context = runtime.contextFromRequest(request);
+
+  const created = await compatibility.hold({ type: 'preference', summary: '喜欢红茶' });
+  const pinned = await compatibility.pin(created.id, { resource_revision: created.resourceRevision, idempotency_key: 'compat-pin-1' });
+  const pinReplay = await compatibility.pin(created.id, { resource_revision: created.resourceRevision, idempotency_key: 'compat-pin-1' });
+  assert.equal(pinned.metadata.versionId, created.metadata.versionId);
+  assert.equal(pinned.resourceRevision, pinReplay.resourceRevision);
+
+  const corrected = await compatibility.update(created.id, {
+    summary: '现在更喜欢乌龙茶',
+    resource_revision: pinned.resourceRevision,
+    idempotency_key: 'compat-correct-1'
+  });
+  assert.equal(corrected.summary, '现在更喜欢乌龙茶');
+  const unpinned = await compatibility.unpin(corrected.id, { resource_revision: corrected.resourceRevision, idempotency_key: 'compat-unpin-1' });
+  assert.equal(unpinned.status, 'active');
+
+  const forgotten = await compatibility.forget(unpinned.id, { resource_revision: unpinned.resourceRevision, idempotency_key: 'compat-forget-1' });
+  assert.equal(forgotten.status, 'forgotten');
+  assert.equal(forgotten.summary, '');
+  assert.equal((await compatibility.list({ includeRevoked: true })).some(item => item.id === created.id && item.status === 'forgotten'), true);
+
+  const sensitive = await compatibility.hold({ type: 'fact', summary: '家庭冲突记录', sensitivity: 'S2', idempotency_key: 'compat-s2-1' });
+  assert.equal(sensitive.status, 'pending_confirmation');
+  assert.equal(sensitive.summary, '家庭冲突记录');
+  assert.equal(typeof sensitive.confirmation.id, 'string');
+  const confirmations = await compatibility.listConfirmations();
+  assert.equal(confirmations.items.some(item => item.id === sensitive.confirmation.id), true);
+  const confirmed = await compatibility.confirm(sensitive.confirmation.id, {
+    resource_revision: sensitive.confirmation.resourceRevision,
+    idempotency_key: 'compat-confirm-1'
+  });
+  assert.equal(confirmed.status, 'active');
+  assert.equal(confirmed.summary, '家庭冲突记录');
+
+  const event = await module.recordEvent(context, { eventId: 'compat-candidate-event', content: '请记住我喜欢桂花茶' });
+  const candidate = await module.createCandidate(context, { sourceEventId: event.rawEventId, content: '喜欢桂花茶', memoryType: 'preference', sensitivity: 'S0' });
+  const listedCandidates = await compatibility.list({ status: 'candidate' });
+  assert.equal(listedCandidates.some(item => item.id === candidate.memory.memoryId && item.summary === '喜欢桂花茶'), true);
+  const promoted = await compatibility.promote(candidate.memory.memoryId, {
+    resource_revision: candidate.memory.resourceRevision,
+    idempotency_key: 'compat-promote-1'
+  });
+  assert.equal(promoted.status, 'active');
+  assert.equal(promoted.summary, '喜欢桂花茶');
+});
+
+test('Memory Module runtime rebinds when account cleanup replaces the canonical memory state object', async () => {
+  const state = { memoryModule: createMemoryModuleState() };
+  const runtime = createMemoryModuleRuntime({ getState: () => state });
+  const first = runtime.moduleForRequest(request);
+  state.memoryModule = createMemoryModuleState();
+  const second = runtime.moduleForRequest(request);
+
+  assert.notEqual(second, first);
+  const context = runtime.contextFromRequest(request);
+  await second.createSession(context, { id: 'rebound-session', callerAgentId: 'cochpia' });
+  assert.equal(state.memoryModule.sessions.some(item => item.id === 'rebound-session'), true);
+  assert.equal(first.state.sessions.some(item => item.id === 'rebound-session'), false);
+});

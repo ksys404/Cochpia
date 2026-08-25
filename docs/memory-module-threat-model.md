@@ -1,6 +1,6 @@
 # Memory Module Threat Model & Security Baseline
 
-版本：V1 draft（2026-08-22）
+版本：V1 draft（2026-08-24）
 
 ## 信任边界
 
@@ -28,10 +28,10 @@
 
 - `AUTH_MODE=required`、`STORAGE_PROVIDER=postgres`。
 - 生产数据库使用 `DATABASE_SSL=true` 或 `verify-full` 并校验证书；`no-verify` 只允许明确的开发/自签名例外。
-- 生产环境必须设置 Memory Module service token，所有密钥不得写入源码、日志或响应。
+- 生产环境必须设置 Memory Module service token，并启用 signed service-auth v1；audience、issuer、timestamp 和一次性 nonce 必须校验，nonce 由 PostgreSQL replay ledger 跨进程消费。所有密钥不得写入源码、日志或响应。
 - `auto_extract`、`auto_profile_update`、`episode_grouping`、`vector_retrieval` 和主动提及必须可独立关闭。
 - worker、index、backup、restore 失败时只能降级派生能力，不能伪造治理 mutation 成功。
 
 ## 未接受风险
 
-当前没有可用的真实 PostgreSQL、PITR 或压测环境，因此数据库事务、TLS 证书链、RPO/RTO、p95/p99 和跨进程 fencing 尚未形成运行证据。进入真实用户 Alpha 前必须完成这些验证并记录负责人和结果。
+当前已经有隔离临时 PostgreSQL、TLS、PITR/tombstone、跨进程 worker fencing 和本地 p95/p99 的运行证据；对应结果见 `docs/memory-module-evaluation-report.md` 及 `artifacts/` 下的 acceptance/benchmark 文件。这些证据不等同于托管生产环境：生产 RPO/RTO、长期 outage/backlog、证书链/HTTPS、日志 DLP、Redis/cache、完整 canonical 1M pgvector/HNSW、删除传播计时和供应商审计仍未形成运行证据。进入真实用户 Alpha 前必须完成这些验证并记录负责人和结果。

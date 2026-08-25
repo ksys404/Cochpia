@@ -55,12 +55,44 @@ test('worker retries failures and dead-letters after the configured attempt limi
   state.rawEvents.push(rawEvent('raw-failing'));
   state.outboxEvents.push({ id: 'outbox-failing', type: 'raw_event.created', aggregateId: 'raw-failing', status: 'pending' });
   const worker = createMemoryModuleWorker({ state, maxAttempts: 2, processEvent: async () => { throw Object.assign(new Error('temporary'), { code: 'MODEL_UNAVAILABLE' }); } });
-  const first = await worker.runOnce();
+  const firstNow = new Date('2026-08-24T00:00:00.000Z');
+  const first = await worker.runOnce({ now: firstNow, clock: () => firstNow });
   assert.equal(first.status, 'pending');
-  const second = await worker.runOnce();
+  assert.equal(state.outboxEvents[0].nextAttemptAt > firstNow.toISOString(), true);
+  const beforeDue = await worker.runOnce({ now: firstNow, clock: () => firstNow });
+  assert.equal(beforeDue.status, 'idle');
+  const retryNow = new Date(state.outboxEvents[0].nextAttemptAt);
+  const second = await worker.runOnce({ now: retryNow, clock: () => retryNow });
   assert.equal(second.status, 'dead_letter');
   assert.equal(state.outboxEvents[0].attempts, 2);
   assert.equal(state.jobAttempts[1].errorCode, 'MODEL_UNAVAILABLE');
+});
+
+test('retry backoff prevents one failing event from starving the rest of the backlog', async () => {
+  const state = createMemoryModuleState();
+  state.rawEvents.push(rawEvent('raw-failing-backlog'), rawEvent('raw-healthy-backlog'));
+  state.outboxEvents.push(
+    { id: 'outbox-failing-backlog', type: 'raw_event.created', aggregateId: 'raw-failing-backlog', status: 'pending' },
+    { id: 'outbox-healthy-backlog', type: 'raw_event.created', aggregateId: 'raw-healthy-backlog', status: 'pending' }
+  );
+  const processed = [];
+  const now = new Date('2026-08-24T00:00:00.000Z');
+  const worker = createMemoryModuleWorker({
+    state,
+    workerId: 'backlog-worker',
+    processEvent: async ({ event }) => {
+      if (event.id === 'outbox-failing-backlog') throw Object.assign(new Error('outage'), { code: 'UPSTREAM_OUTAGE' });
+      processed.push(event.id);
+      return { status: 'processed' };
+    }
+  });
+  const first = await worker.runOnce({ now, clock: () => now });
+  const second = await worker.runOnce({ now, clock: () => now });
+  assert.equal(first.status, 'pending');
+  assert.equal(second.status, 'completed');
+  assert.deepEqual(processed, ['outbox-healthy-backlog']);
+  assert.equal(state.outboxEvents[0].status, 'pending');
+  assert.equal(state.outboxEvents[1].status, 'completed');
 });
 
 test('expired leases are reclaimable and a stale completion is fenced', async () => {

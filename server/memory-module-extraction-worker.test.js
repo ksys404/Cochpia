@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createMemoryModule, createMemoryModuleState } from './memory-module.js';
-import { createMemoryExtractionWorker } from './memory-module-extraction-worker.js';
+import { createMemoryExtractionWorker, processExtractionEvent } from './memory-module-extraction-worker.js';
 
 const context = { tenantId: 'tenant-a', subjectUserId: 'user-a', actorType: 'user', actorId: 'user-a' };
 
@@ -60,6 +60,20 @@ test('extraction worker fences a non-final event even if an old outbox row exist
   const result = await worker.runOnce();
   assert.equal(result.status, 'completed');
   assert.equal(result.result, 'awaiting_finalization');
+  assert.equal(state.assertions.length, 0);
+});
+
+test('extraction worker respects do-not-mention event policy', async () => {
+  const state = createMemoryModuleState();
+  const memory = createMemoryModule(state, async () => {});
+  const eventResult = await memory.recordEvent({ tenantId: 'tenant-a', subjectUserId: 'user-a', actorType: 'user', actorId: 'user-a', callerAgentId: 'cochpia' }, {
+    eventId: 'do-not-mention-event',
+    content: '记住我喜欢桂花乌龙',
+    metadata: { privacy_directive: 'do_not_mention' }
+  });
+  const outbox = state.outboxEvents.find(item => item.aggregateId === eventResult.rawEventId);
+  const result = await processExtractionEvent({ state, memory, event: outbox, workerId: 'worker-a' });
+  assert.equal(result.status, 'policy_blocked');
   assert.equal(state.assertions.length, 0);
 });
 

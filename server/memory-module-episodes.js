@@ -26,6 +26,7 @@ export function rebuildEpisodes(state, { tenantId, userId, sessionId = null, win
     .filter(event => event.tenantId === tenantId && event.userId === userId)
     .filter(event => sessionId ? event.sessionId === sessionId : !event.sessionId)
     .filter(event => event.isStreamFinal !== false)
+    .filter(event => event.metadata?.privacy_directive !== 'do_not_mention')
     .filter(event => classifyMemorySensitivity({ content: event.content }) !== 'S2')
     .filter(event => !eventIsRedacted(state, event))
     .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime());

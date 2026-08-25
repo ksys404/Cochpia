@@ -15,3 +15,14 @@ export function resolveDbSsl() {
   if (mode === 'no-verify') return { rejectUnauthorized: false };
   return undefined;
 }
+
+export function validateProductionDbTls({ nodeEnv = process.env.NODE_ENV, storageProvider = process.env.STORAGE_PROVIDER, databaseSsl = process.env.DATABASE_SSL } = {}) {
+  if (String(nodeEnv || '').toLowerCase() !== 'production' || String(storageProvider || '').toLowerCase() !== 'postgres') return;
+  const mode = String(databaseSsl || '').toLowerCase();
+  if (!['true', 'require', 'verify-full'].includes(mode)) {
+    throw Object.assign(
+      new Error('DATABASE_SSL=true, require, or verify-full is required for PostgreSQL in production'),
+      { code: 'DATABASE_TLS_CONFIGURATION_INVALID', status: 503 }
+    );
+  }
+}

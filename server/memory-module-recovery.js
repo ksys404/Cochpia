@@ -1,4 +1,4 @@
-import { removeAccountDataForSubject } from './memory-module.js';
+import { removeAccountDataForSubject } from './memory-module-deletion.js';
 
 export function replayRedactionLedger(state) {
   state.tombstones ||= [];

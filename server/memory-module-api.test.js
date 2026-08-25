@@ -27,6 +27,26 @@ async function withApi(run) {
   }
 }
 
+async function withInternalApi(run) {
+  const memory = createMemoryModule(createMemoryModuleState());
+  const app = express();
+  app.use(express.json());
+  app.use('/v1', createMemoryModuleRouter({
+    internalOnly: true,
+    internalServiceToken: 'test-only-memory-token',
+    memoryModuleForRequest: () => memory,
+    contextFromRequest: () => context
+  }));
+  const server = createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  try {
+    return await run(`http://127.0.0.1:${address.port}`);
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
+}
+
 async function request(base, path, options = {}) {
   const response = await fetch(`${base}${path}`, {
     ...options,
@@ -47,6 +67,31 @@ test('V1 HTTP contract supports write, retrieve, and read-your-write', async () 
     assert.equal(retrieved.body.answerability, 'known');
     assert.equal(retrieved.body.queryRoute, 'profile_exact');
     assert.equal(retrieved.body.items[0].content, '喜欢乌龙茶');
+  });
+});
+
+test('internal-only V1 write boundary rejects public writes and accepts a service token', async () => {
+  await withInternalApi(async base => {
+    const rejected = await request(base, '/v1/events', { method: 'POST', body: JSON.stringify({ event_id: 'public-event', content: 'not stored' }) });
+    assert.equal(rejected.response.status, 403);
+    assert.equal(rejected.body.error.code, 'MEMORY_INTERNAL_AUTH_REQUIRED');
+
+    const accepted = await request(base, '/v1/events', {
+      method: 'POST',
+      headers: { 'x-memory-service-token': 'test-only-memory-token' },
+      body: JSON.stringify({ event_id: 'internal-event', content: 'stored by service' })
+    });
+    assert.equal(accepted.response.status, 202);
+    assert.equal(accepted.body.result, 'accepted_stored');
+
+    const created = await request(base, '/v1/memories', {
+      method: 'POST',
+      headers: { 'x-memory-service-token': 'test-only-memory-token' },
+      body: JSON.stringify({ content: 'read path remains user-facing', sensitivity: 'S0' })
+    });
+    const retrieved = await request(base, '/v1/retrieve', { method: 'POST', body: JSON.stringify({ query: 'read path remains user-facing', purpose: 'answer_user_query' }) });
+    assert.equal(created.response.status, 201);
+    assert.equal(retrieved.response.status, 200);
   });
 });
 
@@ -152,6 +197,38 @@ test('V1 governance delete routes a physical source-event deletion and returns a
     assert.equal(operation.response.status, 200);
     assert.equal(operation.body.action, 'delete');
     assert.equal(operation.body.targetType, 'source_event');
+  });
+});
+
+test('V1 export operations return a bounded snapshot and expose stale status after a write', async () => {
+  await withApi(async base => {
+    const created = await request(base, '/v1/memories', { method: 'POST', body: JSON.stringify({ content: 'API 导出内容', sensitivity: 'S0' }) });
+    assert.equal(created.response.status, 201);
+
+    const started = await request(base, '/v1/export-operations', {
+      method: 'POST',
+      headers: { 'Idempotency-Key': 'api-export-operation-1' },
+      body: JSON.stringify({})
+    });
+    assert.equal(started.response.status, 201);
+    assert.equal(started.body.status, 'ready');
+
+    const status = await request(base, `/v1/export-operations/${started.body.id}`);
+    assert.equal(status.response.status, 200);
+    assert.equal(status.body.status, 'ready');
+
+    const data = await request(base, `/v1/export-operations/${started.body.id}/data`);
+    assert.equal(data.response.status, 200);
+    assert.equal(data.body.version, 1);
+    assert.equal(data.body.data.assertions.some(item => item.id === created.body.memory.memoryId), true);
+
+    const changed = await request(base, '/v1/memories', { method: 'POST', body: JSON.stringify({ content: 'API 导出后变更', sensitivity: 'S0' }) });
+    assert.equal(changed.response.status, 201);
+    const stale = await request(base, `/v1/export-operations/${started.body.id}`);
+    assert.equal(stale.body.status, 'stale');
+    const rejected = await request(base, `/v1/export-operations/${started.body.id}/data`);
+    assert.equal(rejected.response.status, 409);
+    assert.equal(rejected.body.error.code, 'EXPORT_SNAPSHOT_STALE');
   });
 });
 

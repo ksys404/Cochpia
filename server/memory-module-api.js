@@ -1,5 +1,5 @@
 import express from 'express';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { MemoryModuleError } from './memory-module.js';
 
 function sendError(res, error, requestId) {
@@ -34,7 +34,15 @@ function mutationInput(req) {
   return key ? { ...body, idempotency_key: key } : body;
 }
 
-export function createMemoryModuleRouter({ memoryModuleForRequest, contextFromRequest }) {
+function serviceTokenMatches(provided, expected) {
+  const providedBuffer = Buffer.from(String(provided || ''));
+  const expectedBuffer = Buffer.from(String(expected || ''));
+  return providedBuffer.length === expectedBuffer.length
+    && providedBuffer.length > 0
+    && timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
+export function createMemoryModuleRouter({ memoryModuleForRequest, contextFromRequest, internalOnly = false, internalServiceToken = process.env.MEMORY_INTERNAL_SERVICE_TOKEN || '' }) {
   if (typeof memoryModuleForRequest !== 'function' || typeof contextFromRequest !== 'function') throw new TypeError('Memory Module router requires memoryModuleForRequest and contextFromRequest');
   const router = express.Router();
   const run = (handler, { status = 200 } = {}) => async (req, res) => {
@@ -47,6 +55,17 @@ export function createMemoryModuleRouter({ memoryModuleForRequest, contextFromRe
       return sendError(res, error, requestId);
     }
   };
+
+  router.use((req, res, next) => {
+    const isReadRequest = ['GET', 'HEAD', 'OPTIONS'].includes(req.method) || (req.method === 'POST' && ['/retrieve', '/context-bundles'].includes(req.path));
+    if (!internalOnly || isReadRequest) return next();
+    const requestId = req.requestId || randomUUID();
+    if (!internalServiceToken) return sendError(res, new MemoryModuleError('MEMORY_INTERNAL_AUTH_NOT_CONFIGURED', 'Memory Module write boundary is not configured', { status: 503 }), requestId);
+    if (!serviceTokenMatches(req.get('x-memory-service-token'), internalServiceToken)) {
+      return sendError(res, new MemoryModuleError('MEMORY_INTERNAL_AUTH_REQUIRED', 'Memory Module write boundary requires service authentication', { status: 403 }), requestId);
+    }
+    return next();
+  });
 
   router.post('/events', run((memory, context, req) => memory.recordEvent(context, req.body || {}), { status: 202 }));
   router.post('/sessions', run((memory, context, req) => memory.createSession(context, mutationInput(req)), { status: 201 }));
@@ -89,6 +108,13 @@ export function createMemoryModuleRouter({ memoryModuleForRequest, contextFromRe
     if (body.target_type === 'account') return memory.deleteAccount(context, body);
     throw new MemoryModuleError('UNSUPPORTED_GOVERNANCE_TARGET', 'Unsupported delete target', { status: 400 });
   }));
+  router.post('/export-operations', run((memory, context, req) => memory.createExportOperation(context, mutationInput(req)), { status: 201 }));
+  router.get('/export-operations/:id', run((memory, context, req) => {
+    const operation = memory.getExportOperation(context, req.params.id);
+    if (!operation) throw new MemoryModuleError('EXPORT_OPERATION_NOT_FOUND', 'Export operation not found', { status: 404 });
+    return operation;
+  }));
+  router.get('/export-operations/:id/data', run((memory, context, req) => memory.downloadExport(context, req.params.id)));
   router.delete('/memories/:id', run((memory, context, req) => memory.remove(context, req.params.id, mutationInput(req))));
   router.post('/confirmations/:id/confirm', run((memory, context, req) => memory.confirm(context, req.params.id, mutationInput(req))));
   router.post('/confirmations/:id/reject', run((memory, context, req) => memory.reject(context, req.params.id, mutationInput(req))));
