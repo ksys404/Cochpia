@@ -4,7 +4,7 @@ import { createMemoryModule, createMemoryModuleState } from '../server/memory-mo
 import { evaluateMemoryRetrieval } from '../server/memory-module-eval.js';
 
 const casesPath = path.resolve(process.cwd(), process.env.MEMORY_EVAL_CASES || 'docs/memory-module-eval-v0.2.json');
-const outputPath = path.resolve(process.cwd(), process.env.MEMORY_EVAL_SYNTHETIC_RESULTS || 'docs/memory-module-eval-v0.2-synthetic-results.json');
+const outputPath = path.resolve(process.cwd(), process.env.MEMORY_EVAL_SYNTHETIC_RESULTS || 'artifacts/memory-module-eval-v0.2-synthetic-results.json');
 const tenantId = 'synthetic-eval-tenant';
 const userId = 'synthetic-eval-user';
 

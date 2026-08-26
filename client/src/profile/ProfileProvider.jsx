@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../api';
 
 // 默认：无年龄、无性别，只保留名字与头像
-const DEFAULT_PROFILE = { name: 'Cochpia', gender: 'none', age: null, avatar: '✦', avatarImage: null, characterSheet: null, characterAnimation: null };
+const DEFAULT_PROFILE = { name: 'Cochpia', gender: 'none', age: null, avatar: '✦' };
 
 const ProfileContext = createContext(null);
 

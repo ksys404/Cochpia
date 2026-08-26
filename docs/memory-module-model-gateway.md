@@ -27,4 +27,4 @@ rerank(query, candidates, { signal }) -> ranked candidates   # optional
 
 ## Current status
 
-统一 gateway 现在会对 extraction 候选限量并剥离未知字段，对 embedding/reranker 输出做 schema 校验，执行统一 timeout/错误分类，并将不含正文的 provider/model/token/latency telemetry 记录为安全事件；独立服务已有可选 HTTP extraction/embedding adapter 与 native lexical/vector/hybrid fallback wiring，但真实 provider 质量、供应商数据保留审计和 pgvector 性能尚未验收。
+统一 gateway 现在会对 extraction 候选限量并剥离未知字段，对 embedding/reranker 输出做 schema 校验，执行统一 timeout/错误分类，并将不含正文的 provider/model/token/latency telemetry 记录为安全事件；`npm run check:memory-model-gateway` 及其 fixture artifact 已把 S2/S3、retry/auth、provider error mapping、retention metadata 和 telemetry content-free 规则串成可复现审计。独立服务已有可选 HTTP extraction/embedding adapter 与 native lexical/vector/hybrid fallback wiring，但真实 provider 质量、供应商数据保留/区域/训练/删除审计和 pgvector 性能尚未验收。

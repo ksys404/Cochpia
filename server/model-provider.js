@@ -1,4 +1,4 @@
-const DEFAULT_SYSTEM_PROMPT = '你是 Cochpia，一个重视共同经历、记忆来源和关系连续性的 AI 伴侣。回答要自然、具体，不要声称拥有真实意识。';
+import { buildCompanionMessages, buildCompanionSystemPrompt } from './model-message-builder.js';
 
 export const MODEL_PRESETS = {
   mock: { label: '本地 Mock', protocol: 'mock', suggestedModels: ['mock'], useCases: '本地调试，不产生云端费用' },
@@ -19,6 +19,7 @@ function readTextContent(value) {
   if (Array.isArray(value)) return value.map(part => typeof part === 'string' ? part : part?.text || '').join('');
   return '';
 }
+function trimTerminalPunctuation(value) { return String(value ?? '').trim().replace(/[。！!？?]+$/u, ''); }
 function errorMessage(response, payload) {
   return payload?.error?.message || payload?.message || `Model request failed with status ${response.status}`;
 }
@@ -48,11 +49,16 @@ function modelRequestError(response, payload) {
   return error;
 }
 
-function currentTimeText() {
-  const now = new Date();
-  const week = ['日', '一', '二', '三', '四', '五', '六'];
-  const pad = n => String(n).padStart(2, '0');
-  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${week[now.getDay()]} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+function linkAbortSignal(externalSignal) {
+  const controller = new AbortController();
+  if (!externalSignal) return { controller, dispose: () => {} };
+  const forwardAbort = () => controller.abort();
+  if (externalSignal.aborted) controller.abort();
+  else externalSignal.addEventListener('abort', forwardAbort, { once: true });
+  return {
+    controller,
+    dispose: () => externalSignal.removeEventListener('abort', forwardAbort)
+  };
 }
 
 export function resolveModelConfig(provider = process.env.MODEL_PROVIDER || 'mock', overrides = {}) {
@@ -62,8 +68,21 @@ export function resolveModelConfig(provider = process.env.MODEL_PROVIDER || 'moc
   const apiKey = overrides.apiKey || process.env[providerEnvName(provider, 'API_KEY')] || (active ? process.env.MODEL_API_KEY : '');
   const model = overrides.model || process.env[providerEnvName(provider, 'NAME')] || (active ? process.env.MODEL_NAME : '') || (provider === 'mock' ? 'mock' : '');
   const apiURL = overrides.apiURL || process.env[providerEnvName(provider, 'API_URL')] || (active ? process.env.MODEL_API_URL : '') || preset.baseURL;
-  const error = preset.protocol === 'mock' ? null : (!apiKey || !model ? `Configure ${providerEnvName(provider, 'API_KEY')} and ${providerEnvName(provider, 'NAME')} (or active provider generic variables)` : null);
-  return { provider, label: preset.label, protocol: preset.protocol, apiKey, model, apiURL, ready: !error, error, suggestedModels: preset.suggestedModels };
+  const retentionPolicy = overrides.retentionPolicy
+    || process.env[providerEnvName(provider, 'RETENTION_POLICY')]
+    || (active ? process.env.MODEL_RETENTION_POLICY : '')
+    || '';
+  const configurationError = !apiKey || !model
+    ? `Configure ${providerEnvName(provider, 'API_KEY')} and ${providerEnvName(provider, 'NAME')} (or active provider generic variables)`
+    : null;
+  const policyError = String(process.env.NODE_ENV || '').toLowerCase() === 'production'
+    && preset.protocol !== 'mock'
+    && (!String(retentionPolicy).trim() || String(retentionPolicy).trim().toLowerCase() === 'unknown')
+    ? 'MODEL_RETENTION_POLICY is required for this external model provider in production'
+    : null;
+  const error = preset.protocol === 'mock' ? null : configurationError || policyError;
+  const errorCode = policyError ? 'MODEL_EXTERNAL_POLICY_REQUIRED' : configurationError ? 'MODEL_NOT_CONFIGURED' : null;
+  return { provider, label: preset.label, protocol: preset.protocol, apiKey, model, apiURL, retentionPolicy, ready: !error, error, errorCode, suggestedModels: preset.suggestedModels };
 }
 
 export function listModelProviders() {
@@ -76,57 +95,84 @@ export function listModelProviders() {
 export function resolveModelSelection(provider = process.env.MODEL_PROVIDER || 'mock', requestedModel = '') {
   const config = resolveModelConfig(provider);
   if (!MODEL_PRESETS[provider]) return { ok: false, code: 'MODEL_PROVIDER_UNSUPPORTED', error: config.error };
-  if (!config.ready) return { ok: false, code: 'MODEL_NOT_CONFIGURED', error: config.error, config };
+  if (!config.ready) return { ok: false, code: config.errorCode || 'MODEL_NOT_CONFIGURED', error: config.error, config };
   const selectedModel = requestedModel || config.model;
   const allowed = provider === 'mock' || !requestedModel || config.model === requestedModel || config.suggestedModels.includes(requestedModel);
   if (!allowed) return { ok: false, code: 'MODEL_NOT_ALLOWED', error: `Model ${requestedModel} is not available for provider ${provider}`, config };
   return { ok: true, config: { ...config, model: selectedModel } };
 }
 
+export function validateProductionModelPolicy({ nodeEnv = process.env.NODE_ENV, provider = process.env.MODEL_PROVIDER || 'mock', retentionPolicy } = {}) {
+  if (String(nodeEnv || '').toLowerCase() !== 'production' || String(provider || '').toLowerCase() === 'mock') return;
+  const policy = String(
+    retentionPolicy
+      ?? process.env[providerEnvName(provider, 'RETENTION_POLICY')]
+      ?? (provider === (process.env.MODEL_PROVIDER || 'mock') ? process.env.MODEL_RETENTION_POLICY : '')
+      ?? ''
+  ).trim();
+  if (!policy || policy.toLowerCase() === 'unknown') {
+    throw Object.assign(
+      new Error('MODEL_RETENTION_POLICY is required for an external model provider in production'),
+      { code: 'MODEL_EXTERNAL_POLICY_REQUIRED', status: 503 }
+    );
+  }
+}
+
 export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mock', overrides = {}) {
   const config = resolveModelConfig(provider, overrides);
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const generateMock = ({ message, recalled = [] }) => {
-    const clipped = String(message).slice(0, 54);
-    return recalled.length
-      ? `我记得我们正在建立一段会持续变化的关系。你刚才提到“${clipped}”，我会把它和过去的经历放在一起理解。现在的我会更关注你的真实感受，也会保留这次相遇。`
-      : `我听见了：“${clipped}”。这是我们共同经历的一个新片段。我会先理解它，再决定哪些内容值得长期记住。`;
+  const generateMock = ({ message, recalled = [], runtimeContext = null }) => {
+    const clipped = String(message || '').slice(0, 80);
+    const plan = runtimeContext?.responsePlan;
+    const memories = Array.isArray(runtimeContext?.recalled) && runtimeContext.recalled.length
+      ? runtimeContext.recalled
+      : recalled;
+    const topic = runtimeContext?.turn?.topics?.[0] || runtimeContext?.currentState?.currentTopic || '这件事';
+    const emotion = runtimeContext?.turn?.emotion?.label || '现在的感受';
+
+    if (plan?.mode === 'memory_confirmation') {
+      if (memories.length && plan.memoryAnswerability === 'known') {
+        const summary = trimTerminalPunctuation(String(memories[0].summary || '').slice(0, 180));
+        return `我能确认记得一部分：${summary}。如果你说的是另一件事，可以再给我一点线索。`;
+      }
+      return '我这次没有找到足够的相关记忆，不想假装自己记得。你愿意的话，可以再告诉我一次。';
+    }
+    if (plan?.mode === 'empathize_then_clarify') {
+      return `听起来你在${topic}上正经历${emotion}，这确实会让人消耗不少。你更想让我先听你说说，还是一起找一个小的下一步？`;
+    }
+    if (plan?.mode === 'clarify_then_advise') {
+      return `我先接住你现在关于${topic}的困惑。可以先把问题缩小成一个今天能完成的小步骤；如果你愿意，我也可以和你一起把这个步骤具体化。`;
+    }
+    if (plan?.mode === 'warm_greeting') return '我在。今天想从什么事情开始聊？';
+    if (plan?.mode === 'acknowledge_and_explore') return `我听到了你关于${topic}的分享，这件事对你来说应该很重要。你现在最想继续展开哪一部分？`;
+    if (plan) return `我在听你说的${topic}。你刚才提到“${clipped}”，我们可以从你最在意的地方继续。`;
+
+    // Backward-compatible deterministic fallback for callers that do not yet provide Runtime Context.
+    return memories.length
+      ? `我记得我们正在建立一段会持续变化的关系。你刚才提到“${clipped}”，我会把它和过去的经历放在一起理解。`
+      : `我听见了：“${clipped}”。这是我们共同经历的一个新片段。`;
   };
-  const composePrompts = ({ message, recalled = [], runtimeContext = null }) => {
-    const context = recalled.map(item => `- ${item.summary}`).join('\n') || '暂无相关记忆';
-    const memoryGovernance = runtimeContext?.memoryBundle
-      ? `\n\n记忆系统状态：${runtimeContext.memoryBundle.answerability || 'not_found'}；一致性：${runtimeContext.memoryBundle.consistency || 'unknown'}；策略结果：${runtimeContext.memoryBundle.policyResult || 'unknown'}`
-      : '';
-    const history = (runtimeContext?.messages || [])
-      .filter(item => item.content && item.content !== message)
-      .map(item => `${item.role}: ${item.content}`)
-      .join('\n') || '暂无更多对话上下文';
-    const personality = runtimeContext?.personality
-      ? `人格版本：v${runtimeContext.personality.version}\n人格摘要：${runtimeContext.personality.summary || '暂无'}\n人格特质：${runtimeContext.personality.traits.map(trait => `${trait.label}=${trait.value}`).join('、')}`
-      : '暂无人格上下文';
-    const basePrompt = runtimeContext?.persona || process.env.MODEL_SYSTEM_PROMPT || DEFAULT_SYSTEM_PROMPT;
-    const summary = runtimeContext?.summary ? `\n\n对话摘要：\n${runtimeContext.summary}` : '';
-    const upcoming = (runtimeContext?.upcomingEvents || []).length
-      ? `\n\n临近日程：\n${runtimeContext.upcomingEvents.map(event => `- ${event.title}（${String(event.date).slice(0, 10)}${event.note ? `，备注：${event.note}` : ''}）`).join('\n')}`
-      : '';
-    const atmosphere = runtimeContext?.atmosphere ? `\n\n互动氛围：${runtimeContext.atmosphere}` : '';
-    const genderLabel = ({ none: '无性别（以「它」称呼）', male: '男（以「他」称呼）', female: '女（以「她」称呼）', other: '其他（以「Ta」称呼）' })[runtimeContext?.profile?.gender] || runtimeContext?.profile?.gender || '无性别';
-    const profileSection = runtimeContext?.profile
-      ? `\n\n角色设定：\n- 名字：${runtimeContext.profile.name || 'Cochpia'}\n- 性别：${genderLabel}\n- 年龄：${runtimeContext.profile.age != null ? `${runtimeContext.profile.age} 岁` : '无（永恒，不设年龄）'}`
-      : '';
-    const modeSection = runtimeContext?.mode === 'work'
-      ? '\n\n工作模式：你当前处于工作模式，是一位任务导向的编程助手。请直接、简洁、高效地解决问题，必要时给出可执行的步骤或代码。不要把工作回应伪装成情感陪伴。'
-      : `\n\n陪伴模式：你当前处于陪伴模式。优先理解用户的感受和真实意图，不要把普通分享自动转换成任务。保持自然、具体、有连续性的回应；不声称拥有真实意识，不制造依赖，不替用户做重要决定。当前陪伴意图：${({ listen: '倾听并回应', comfort: '安慰和情绪支持', advice: '先理解再提供建议', accompany: '陪用户一起完成一件事', quiet: '少说一些，安静陪伴' })[runtimeContext?.companionIntent] || '倾听并回应'}。`;
-    const system = `${basePrompt}${profileSection}${modeSection}\n\n当前时间：${currentTimeText()}\n（涉及时间、日期、早晚问候时，请以这个时间为准）\n\n相关记忆：\n${context}${memoryGovernance}\n\n人格上下文：\n${personality}${atmosphere}\n\n近期对话：\n${history}${summary}${upcoming}`;
-    return { system, user: String(message) };
+
+  const buildMessages = ({ message, recalled = [], runtimeContext = null, messages = null } = {}) => (
+    Array.isArray(messages) && messages.length
+      ? messages
+      : buildCompanionMessages({ message, recalled, runtimeContext })
+  );
+
+  const composePrompts = ({ message, recalled = [], runtimeContext = null, messages = null }) => {
+    const compiled = buildMessages({ message, recalled, runtimeContext, messages });
+    return {
+      system: compiled.find(item => item.role === 'system')?.content || '',
+      messages: compiled
+    };
   };
 
   if (config.protocol === 'mock') {
     return {
       ...config,
-      generate: async ({ message, recalled }) => generateMock({ message, recalled }),
-      async *stream({ message, recalled = [] } = {}) {
-        const full = generateMock({ message, recalled });
+      generate: async ({ message, recalled, runtimeContext } = {}) => generateMock({ message, recalled, runtimeContext }),
+      async *stream({ message, recalled = [], runtimeContext = null } = {}) {
+        const full = generateMock({ message, recalled, runtimeContext });
         for (const chunk of full.match(/.{1,12}/gu) || [full]) { yield chunk; await sleep(24); }
       }
     };
@@ -135,22 +181,20 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
     return { ...config, async generate() { throw new Error(config.error); }, async *stream() { throw new Error(config.error); } };
   }
 
-  const generate = async ({ message, recalled = [], runtimeContext = null, signal: externalSignal } = {}) => {
+  const generate = async ({ message, recalled = [], runtimeContext = null, messages: suppliedMessages = null, signal: externalSignal } = {}) => {
     if (!config.ready) throw new Error(config.error);
-    const { system, user } = composePrompts({ message, recalled, runtimeContext });
-    const controller = new AbortController();
+    const { system, messages } = composePrompts({ message, recalled, runtimeContext, messages: suppliedMessages });
+    const linkedAbort = linkAbortSignal(externalSignal);
+    const controller = linkedAbort.controller;
     const timeout = setTimeout(() => controller.abort(), Number(process.env.MODEL_TIMEOUT_MS || 30000));
-    const signal = externalSignal || controller.signal;
+    const signal = controller.signal;
     try {
       let response;
       if (config.protocol === 'openai-compatible') {
         response = await fetch(config.apiURL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-          body: JSON.stringify({ model: config.model, stream: false, temperature: 0.7, messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user }
-          ] }), signal: controller.signal
+          body: JSON.stringify({ model: config.model, stream: false, temperature: 0.7, messages }), signal
         });
         const payload = await response.json();
         if (!response.ok) throw modelRequestError(response, payload);
@@ -162,7 +206,7 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
         response = await fetch(config.apiURL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': config.apiKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: config.model, max_tokens: 2048, system, messages: [{ role: 'user', content: user }] }), signal
+          body: JSON.stringify({ model: config.model, max_tokens: 2048, system, messages: messages.filter(item => item.role !== 'system') }), signal
         });
         const payload = await response.json();
         if (!response.ok) throw modelRequestError(response, payload);
@@ -174,7 +218,13 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
       const endpoint = `${config.apiURL.replace(/\/$/, '')}/${config.model}:generateContent`;
       response = await fetch(endpoint, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.apiKey },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: user }] }] }), signal
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: messages.filter(item => item.role !== 'system').map(item => ({
+            role: item.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: item.content }]
+          }))
+        }), signal
       });
       const payload = await response.json();
       if (!response.ok) throw modelRequestError(response, payload);
@@ -188,38 +238,39 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
         throw timedOut;
       }
       throw error;
-    } finally { clearTimeout(timeout); }
+    } finally {
+      clearTimeout(timeout);
+      linkedAbort.dispose();
+    }
   };
 
-  const stream = async function* ({ message, recalled = [], runtimeContext = null, signal: externalSignal } = {}) {
+  const stream = async function* ({ message, recalled = [], runtimeContext = null, messages: suppliedMessages = null, signal: externalSignal } = {}) {
     if (!config.ready) throw new Error(config.error);
     // mock 与 gemini/未知协议回退到一次性生成;openai-compatible 与 anthropic 走真流式。
     if (config.protocol !== 'openai-compatible' && config.protocol !== 'anthropic') {
-      yield await generate({ message, recalled, runtimeContext, signal: externalSignal });
+      yield await generate({ message, recalled, runtimeContext, messages: suppliedMessages, signal: externalSignal });
       return;
     }
-    const { system, user } = composePrompts({ message, recalled, runtimeContext });
-    const controller = new AbortController();
+    const { system, messages } = composePrompts({ message, recalled, runtimeContext, messages: suppliedMessages });
+    const linkedAbort = linkAbortSignal(externalSignal);
+    const controller = linkedAbort.controller;
     const timeoutMs = Number(process.env.MODEL_TIMEOUT_MS || 30000);
     let timeout = setTimeout(() => controller.abort(), timeoutMs);
     const resetTimeout = () => { clearTimeout(timeout); timeout = setTimeout(() => controller.abort(), timeoutMs); };
-    const signal = externalSignal || controller.signal;
+    const signal = controller.signal;
     try {
       let response;
       if (config.protocol === 'openai-compatible') {
         response = await fetch(config.apiURL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-          body: JSON.stringify({ model: config.model, stream: true, temperature: 0.7, messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: user }
-          ] }), signal
+          body: JSON.stringify({ model: config.model, stream: true, temperature: 0.7, messages }), signal
         });
       } else {
         response = await fetch(config.apiURL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': config.apiKey, 'anthropic-version': '2023-06-01', Accept: 'text/event-stream' },
-          body: JSON.stringify({ model: config.model, max_tokens: 2048, system, messages: [{ role: 'user', content: user }], stream: true }), signal
+          body: JSON.stringify({ model: config.model, max_tokens: 2048, system, messages: messages.filter(item => item.role !== 'system'), stream: true }), signal
         });
       }
       if (!response.ok) {
@@ -258,7 +309,10 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
         throw timedOut;
       }
       throw error;
-    } finally { clearTimeout(timeout); }
+    } finally {
+      clearTimeout(timeout);
+      linkedAbort.dispose();
+    }
   };
 
   const generateWithTools = async ({ system, messages, tools, signal: externalSignal } = {}) => {
@@ -266,9 +320,10 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
     if (config.protocol !== 'openai-compatible') {
       return { content: await generate({ message: messages[messages.length - 1]?.content || '', signal: externalSignal }), toolCalls: [] };
     }
-    const controller = new AbortController();
+    const linkedAbort = linkAbortSignal(externalSignal);
+    const controller = linkedAbort.controller;
     const timeout = setTimeout(() => controller.abort(), Number(process.env.MODEL_TIMEOUT_MS || 30000));
-    const signal = externalSignal || controller.signal;
+    const signal = controller.signal;
     try {
       const response = await fetch(config.apiURL, {
         method: 'POST',
@@ -287,10 +342,13 @@ export function createModelProvider(provider = process.env.MODEL_PROVIDER || 'mo
     } catch (error) {
       if (error.name === 'AbortError') { const timedOut = new Error('Model request timed out', { cause: error }); timedOut.code = 'MODEL_TIMEOUT'; throw timedOut; }
       throw error;
-    } finally { clearTimeout(timeout); }
+    } finally {
+      clearTimeout(timeout);
+      linkedAbort.dispose();
+    }
   };
 
-  const composeSystemPrompt = ({ recalled = [], runtimeContext = null } = {}) => composePrompts({ message: '', recalled, runtimeContext }).system;
+  const composeSystemPrompt = ({ recalled = [], runtimeContext = null } = {}) => buildCompanionSystemPrompt({ recalled, runtimeContext });
 
   return { ...config, generate, stream, generateWithTools, composeSystemPrompt };
 }

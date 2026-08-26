@@ -59,6 +59,7 @@ test('PostgreSQL repository persists subject-bound normalized source columns', a
     pins: [],
     deletionOperations: [],
     tombstones: [],
+    exportOperations: [{ id: 'export-a', status: 'ready', sourceCommitSeq: 0, operationCommitSeq: 1, requestedAt: new Date().toISOString(), completedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60_000).toISOString(), resourceRevision: 1 }],
     redactionEpochs: {},
     auditEvents: [],
     idempotencyRecords: [],
@@ -68,6 +69,7 @@ test('PostgreSQL repository persists subject-bound normalized source columns', a
   assert.ok(queries.some(sql => sql.includes('INSERT INTO profile_snapshot_items (tenant_id,snapshot_id,user_id,assertion_id')));
   assert.ok(queries.some(sql => sql.includes('INSERT INTO profile_projection_sources (tenant_id,projection_id,user_id,assertion_id')));
   assert.ok(queries.some(sql => sql.includes('INSERT INTO current_state_sources (tenant_id,current_state_id,user_id,raw_event_id')));
+  assert.ok(queries.some(sql => sql.includes('INSERT INTO memory_export_operations (id,tenant_id,subject_user_id')));
 });
 
 test('PostgreSQL repository writes the optional pgvector column only when enabled', async () => {
@@ -301,6 +303,46 @@ test('PostgreSQL outbox load and save remain subject-bound for legacy aggregate 
   assert.deepEqual(params[deleteOutboxIndex], ['tenant-a', 'user-a', ['owned-raw']]);
 });
 
+test('PostgreSQL outbox claim respects retry backoff and finish schedules the next attempt', async () => {
+  const queries = [];
+  const client = {
+    async query(sql, values = []) {
+      queries.push({ sql, values });
+      if (sql.includes('WITH candidate')) return {
+        rows: [{
+          id: 'outbox-backoff',
+          tenant_id: 'tenant-a',
+          user_id: 'user-a',
+          consumer_name: 'memory-derived',
+          event_type: 'raw_event.created',
+          aggregate_id: 'raw-a',
+          schema_version: 1,
+          commit_seq: 4,
+          status: 'processing',
+          lease_owner: 'worker-a',
+          lease_until: '2026-08-24T00:01:00.000Z',
+          attempts: 2,
+          last_error_code: 'MODEL_UNAVAILABLE',
+          next_attempt_at: null,
+          created_at: '2026-08-24T00:00:00.000Z',
+          delivered_at: null,
+          resolved_user_id: 'user-a'
+        }]
+      };
+      return { rows: [] };
+    },
+    release() {}
+  };
+  const repository = createMemoryModulePostgresRepository({ connect: async () => client });
+  const claimed = await repository.claimOutboxEvent({ workerId: 'worker-a', now: new Date('2026-08-24T00:00:00.000Z'), leaseMs: 30_000, eventTypes: ['raw_event.created'] });
+  assert.equal(claimed.event.nextAttemptAt, null);
+  assert.match(queries[0].sql, /o\.next_attempt_at IS NULL OR o\.next_attempt_at <= \$2::timestamptz/);
+  await repository.finishOutboxEvent({ eventId: 'outbox-backoff', workerId: 'worker-a', status: 'pending', errorCode: 'MODEL_UNAVAILABLE', nextAttemptAt: '2026-08-24T00:00:02.000Z' });
+  const finish = queries.at(-1);
+  assert.match(finish.sql, /next_attempt_at/);
+  assert.equal(finish.values[2], '2026-08-24T00:00:02.000Z');
+});
+
 test('PostgreSQL repository discovers due retention subjects with a bounded union query', async () => {
   const queries = [];
   const client = {
@@ -315,6 +357,7 @@ test('PostgreSQL repository discovers due retention subjects with a bounded unio
   const subjects = await repository.listRetentionSubjects({ now: '2026-08-22T00:00:00.000Z', limit: 3 });
   assert.deepEqual(subjects, [{ tenantId: 'tenant-a', subjectUserId: 'user-a' }]);
   assert.match(queries[0], /LIMIT \$2/);
+  assert.match(queries[0], /memory_export_operations/);
 });
 
 test('PostgreSQL repository exposes privacy, index freshness, backlog, and deletion metrics without content', async () => {

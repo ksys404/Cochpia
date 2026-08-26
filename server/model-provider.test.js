@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { createModelProvider, listModelProviders, resolveModelSelection } from './model-provider.js';
+import { createModelProvider, listModelProviders, resolveModelSelection, validateProductionModelPolicy } from './model-provider.js';
 
 test('mock provider returns a relationship-aware response', async () => {
   const provider = createModelProvider('mock');
@@ -11,11 +11,49 @@ test('mock provider returns a relationship-aware response', async () => {
   assert.match(response, /记得|关系/);
 });
 
-test('companion prompt follows the selected support intent', () => {
-  const provider = createModelProvider('openai', { apiKey: 'fixture', model: 'fixture' });
-  const prompt = provider.composeSystemPrompt({ runtimeContext: { mode: 'companion', companionIntent: 'comfort' } });
-  assert.match(prompt, /陪伴模式/);
-  assert.match(prompt, /安慰和情绪支持/);
+test('mock provider avoids duplicate punctuation when confirming recalled memory', async () => {
+  const provider = createModelProvider('mock');
+  const response = await provider.generate({
+    message: '你还记得我喜欢散步吗？',
+    runtimeContext: {
+      recalled: [{ summary: '我喜欢周末散步。' }],
+      responsePlan: { mode: 'memory_confirmation', memoryAnswerability: 'known' }
+    }
+  });
+  assert.equal(response.includes('。。'), false);
+});
+
+test('provider sends compiled multi-turn messages instead of flattening history into system text', async () => {
+  let requestBody = null;
+  const server = createServer((request, response) => {
+    let body = '';
+    request.on('data', chunk => { body += chunk; });
+    request.on('end', () => {
+      requestBody = JSON.parse(body);
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify({ choices: [{ message: { content: 'fixture reply' } }] }));
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  try {
+    const provider = createModelProvider('openai', { apiURL: `http://127.0.0.1:${port}/chat`, apiKey: 'fixture', model: 'fixture' });
+    await provider.generate({
+      message: '我还是想继续做下去。',
+      runtimeContext: {
+        turn: { messageId: 'u-2', intent: 'sharing', emotion: { label: '积极', valence: 0.2, arousal: 0.3 }, topics: ['创业项目'] },
+        responsePlan: { mode: 'acknowledge_and_explore', goals: ['回应进展'], askQuestion: true, maxQuestions: 1 },
+        messages: [
+          { id: 'u-1', role: 'user', content: '我最近在准备创业项目。' },
+          { id: 'a-1', role: 'assistant', content: '我记住了这个方向。' },
+          { id: 'u-2', role: 'user', content: '我还是想继续做下去。' }
+        ]
+      }
+    });
+    assert.deepEqual(requestBody.messages.map(item => item.role), ['system', 'user', 'assistant', 'user']);
+    assert.match(requestBody.messages[0].content, /acknowledge_and_explore/);
+    assert.equal(requestBody.messages.at(-1).content, '我还是想继续做下去。');
+  } finally { await new Promise(resolve => server.close(resolve)); }
 });
 
 test('unsupported provider stays unavailable instead of crashing configuration', async () => {
@@ -49,6 +87,46 @@ test('model selection rejects unavailable providers and accepts configured custo
   } finally {
     if (originalKey === undefined) delete process.env.MODEL_OPENAI_API_KEY; else process.env.MODEL_OPENAI_API_KEY = originalKey;
     if (originalName === undefined) delete process.env.MODEL_OPENAI_NAME; else process.env.MODEL_OPENAI_NAME = originalName;
+  }
+});
+
+test('production external model configuration requires explicit retention policy', () => {
+  assert.throws(
+    () => validateProductionModelPolicy({ nodeEnv: 'production', provider: 'openai', retentionPolicy: '' }),
+    error => error.code === 'MODEL_EXTERNAL_POLICY_REQUIRED'
+  );
+  assert.throws(
+    () => validateProductionModelPolicy({ nodeEnv: 'production', provider: 'openai', retentionPolicy: 'unknown' }),
+    error => error.code === 'MODEL_EXTERNAL_POLICY_REQUIRED'
+  );
+  assert.doesNotThrow(() => validateProductionModelPolicy({ nodeEnv: 'production', provider: 'openai', retentionPolicy: 'no-training-30d' }));
+  assert.doesNotThrow(() => validateProductionModelPolicy({ nodeEnv: 'production', provider: 'mock', retentionPolicy: '' }));
+});
+
+test('production provider selection requires a provider-scoped retention policy', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalProvider = process.env.MODEL_PROVIDER;
+  const originalKey = process.env.MODEL_OPENAI_API_KEY;
+  const originalName = process.env.MODEL_OPENAI_NAME;
+  const originalPolicy = process.env.MODEL_OPENAI_RETENTION_POLICY;
+  process.env.NODE_ENV = 'production';
+  process.env.MODEL_PROVIDER = 'deepseek';
+  process.env.MODEL_OPENAI_API_KEY = 'fixture';
+  process.env.MODEL_OPENAI_NAME = 'fixture';
+  delete process.env.MODEL_OPENAI_RETENTION_POLICY;
+  try {
+    const blocked = resolveModelSelection('openai', 'fixture');
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.code, 'MODEL_EXTERNAL_POLICY_REQUIRED');
+    process.env.MODEL_OPENAI_RETENTION_POLICY = 'no-training-30d';
+    const allowed = resolveModelSelection('openai', 'fixture');
+    assert.equal(allowed.ok, true);
+  } finally {
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = originalNodeEnv;
+    if (originalProvider === undefined) delete process.env.MODEL_PROVIDER; else process.env.MODEL_PROVIDER = originalProvider;
+    if (originalKey === undefined) delete process.env.MODEL_OPENAI_API_KEY; else process.env.MODEL_OPENAI_API_KEY = originalKey;
+    if (originalName === undefined) delete process.env.MODEL_OPENAI_NAME; else process.env.MODEL_OPENAI_NAME = originalName;
+    if (originalPolicy === undefined) delete process.env.MODEL_OPENAI_RETENTION_POLICY; else process.env.MODEL_OPENAI_RETENTION_POLICY = originalPolicy;
   }
 });
 
@@ -141,4 +219,33 @@ test('gemini sends the API key in a header, never in the URL', async () => {
     assert.ok(!capturedUrl.includes('secret-key-fixture'), 'API key must not appear in the URL');
     assert.equal(capturedKeyHeader, 'secret-key-fixture');
   } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test('model provider links external cancellation and internal timeout to the same request', async () => {
+  const server = createServer(() => {
+    // Keep the response open until the client aborts.
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+  const provider = createModelProvider('openai', { apiURL: `http://127.0.0.1:${port}/slow`, apiKey: 'fixture', model: 'fixture' });
+  try {
+    const external = new AbortController();
+    const cancelled = provider.generate({ message: 'x', recalled: [], signal: external.signal });
+    setTimeout(() => external.abort(), 10);
+    await assert.rejects(cancelled, error => error.code === 'MODEL_TIMEOUT');
+
+    const originalTimeout = process.env.MODEL_TIMEOUT_MS;
+    process.env.MODEL_TIMEOUT_MS = '20';
+    try {
+      await assert.rejects(
+        provider.generate({ message: 'x', recalled: [], signal: new AbortController().signal }),
+        error => error.code === 'MODEL_TIMEOUT'
+      );
+    } finally {
+      if (originalTimeout === undefined) delete process.env.MODEL_TIMEOUT_MS;
+      else process.env.MODEL_TIMEOUT_MS = originalTimeout;
+    }
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
 });

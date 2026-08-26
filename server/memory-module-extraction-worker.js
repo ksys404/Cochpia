@@ -8,6 +8,7 @@ export async function processExtractionEvent({ state, memory, event, workerId, m
   if (!featureEnabled(featureFlags, 'autoExtract')) return { status: 'feature_disabled', candidateCount: 0 };
   const sourceEvent = state.rawEvents?.find(item => item.id === event.aggregateId);
   if (!sourceEvent || sourceEvent.isStreamFinal === false) return { status: 'awaiting_finalization', candidateCount: 0 };
+  if (sourceEvent.metadata?.privacy_directive === 'do_not_mention') return { status: 'policy_blocked', candidateCount: 0 };
   if (isSupersededSourceEvent(state.rawEvents, sourceEvent)) return { status: 'superseded_revision', candidateCount: 0 };
   const extracted = await extractCandidates({ event: sourceEvent, modelGateway, allowSensitiveModelInput });
   assertLease();

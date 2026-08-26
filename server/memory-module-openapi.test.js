@@ -29,7 +29,10 @@ test('Memory Module OpenAPI artifact covers every V1 route and shared safety con
     '/v1/confirmations/{confirmation_id}/reject:',
     '/v1/access-confirmations/{access_confirmation_id}/confirm:',
     '/v1/sessions/{session_id}/current-state:',
-    '/v1/deletion-operations/{deletion_operation_id}:'
+    '/v1/deletion-operations/{deletion_operation_id}:',
+    '/v1/export-operations:',
+    '/v1/export-operations/{export_operation_id}:',
+    '/v1/export-operations/{export_operation_id}/data:'
   ]) assert.match(spec, new RegExp(`^  ${route.replace(/[{}]/g, '\\$&')}$`, 'm'));
   assert.match(spec, /openapi: 3\.1\.0/);
   assert.match(spec, /name: Idempotency-Key/);
@@ -38,4 +41,6 @@ test('Memory Module OpenAPI artifact covers every V1 route and shared safety con
   assert.match(spec, /content_type: \{type: string, enum: \[plain_text, structured, tool_output, imported, quoted_content\]/);
   assert.match(spec, /storage_directive: \{type: string, enum: \[default, do_not_store\]/);
   assert.match(spec, /CurrentStateWriteRequest/);
+  assert.match(spec, /ExportOperation/);
+  assert.match(spec, /ExportData/);
 });

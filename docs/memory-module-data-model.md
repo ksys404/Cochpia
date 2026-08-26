@@ -19,7 +19,7 @@ PostgreSQL 是唯一事实来源；以下对象均带 `tenant_id`，用户主体
 | `index_documents` | source/version、Scope、policy/redaction epoch、lexical/vector version | JSONB embedding 保持兼容；显式 pgvector 迁移后写入 `embedding_vector` 并使用 HNSW，返回前仍回源 |
 | `episodes`/`episode_members` | temporal grouping、成员 raw/version | 摘要不能替代成员证据 |
 | `deletion_operations`/`memory_tombstones` | target、action、epoch、状态、时间 | 保留最小治理账本，不保留正文 |
-| `memory_outbox_events` | user、`consumer_name`、event type、aggregate、lease、attempts | 当前派生 worker 使用 `memory-derived`；至少一次投递、租约和 fencing |
+| `memory_outbox_events` | user、`consumer_name`、event type、aggregate、lease、attempts、`next_attempt_at` | 当前派生 worker 使用 `memory-derived`；至少一次投递、租约、指数退避、fencing 和 dead-letter |
 
 ## State and identity rules
 

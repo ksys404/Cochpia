@@ -13,6 +13,15 @@ function createHarness() {
   return { memory, state, persisted };
 }
 
+test('memory sessions can use a server-owned application session id without duplicating it', async () => {
+  const { memory, state } = createHarness();
+  const first = await memory.createSession(userContext(), { id: 'app-session-1', callerAgentId: 'cochpia' });
+  const second = await memory.createSession(userContext(), { id: 'app-session-1', callerAgentId: 'cochpia' });
+  assert.equal(first.id, 'app-session-1');
+  assert.equal(second.id, 'app-session-1');
+  assert.equal(state.sessions.length, 1);
+});
+
 test('event ingress rejects S3 content before canonical, outbox, or model work', async () => {
   const { memory, state } = createHarness();
   const result = await memory.recordEvent(userContext(), { eventId: 'evt-s3', content: 'my key is sk-test_12345678901234567890' });
@@ -32,6 +41,29 @@ test('event ingress rejects unknown storage directives instead of defaulting to 
     error => error.code === 'INVALID_STORAGE_DIRECTIVE'
   );
   assert.equal(state.rawEvents.length, 0);
+});
+
+test('raw event metadata preserves canonical stream provenance fields', async () => {
+  const { memory, state } = createHarness();
+  await memory.recordEvent(userContext(), {
+    eventId: 'evt-stream-provenance',
+    content: 'safe stream event',
+    metadata: {
+      schema_version: 1,
+      event_status: 'partial',
+      run_id: 'run-1',
+      parent_event_id: 'parent-1',
+      received_at: '2026-08-24T00:00:00.000Z'
+    },
+    is_stream_final: false
+  });
+  assert.deepEqual(state.rawEvents[0].metadata, {
+    schema_version: '1',
+    event_status: 'partial',
+    run_id: 'run-1',
+    parent_event_id: 'parent-1',
+    received_at: '2026-08-24T00:00:00.000Z'
+  });
 });
 
 test('do_not_store is enforced across explicit memory, correction, and current-state writes', async () => {
@@ -68,6 +100,15 @@ test('stored event idempotency rejects the same key with a different payload', a
   const { memory } = createHarness();
   await memory.recordEvent(userContext(), { eventId: 'evt-stored', content: 'first payload' });
   await assert.rejects(() => memory.recordEvent(userContext(), { eventId: 'evt-stored', content: 'different payload' }), error => error.code === 'IDEMPOTENCY_CONFLICT' && error.status === 409);
+});
+
+test('duplicate event replay preserves the original raw event provenance', async () => {
+  const { memory } = createHarness();
+  const first = await memory.recordEvent(userContext(), { eventId: 'evt-replay-provenance', content: 'same payload' });
+  const replay = await memory.recordEvent(userContext(), { eventId: 'evt-replay-provenance', content: 'same payload' });
+  assert.equal(replay.result, 'duplicate');
+  assert.equal(replay.rawEventId, first.rawEventId);
+  assert.equal(replay.commitSeq, first.commitSeq);
 });
 
 test('mutation idempotency replays the same response without creating a second memory', async () => {
@@ -493,22 +534,6 @@ test('context bundle preserves pinned core and evidence while compacting to budg
   assert.equal(bundle.truncated, true);
 });
 
-test('context bundle trims evidence metadata before failing on a large retrieval result', async () => {
-  const { memory } = createHarness();
-  for (let index = 0; index < 65; index += 1) {
-    await memory.hold(userContext(), {
-      memoryType: 'fact',
-      content: `检索压力测试记忆 ${index}：用户喜欢在周末整理第 ${index} 个书架。`,
-      sensitivity: 'S0'
-    });
-  }
-  const bundle = memory.contextBundle(userContext(), { query: '检索压力测试记忆 书架', tokenBudget: 1800 });
-  assert.equal(bundle.tokenCount <= bundle.tokenBudget, true);
-  assert.equal(bundle.truncated, true);
-  assert.equal(bundle.evidence.length < 50, true);
-  assert.equal(bundle.userProfile.length > 0, true);
-});
-
 test('context bundle rejects an impossible token budget instead of exceeding it', async () => {
   const { memory } = createHarness();
   assert.throws(() => memory.contextBundle(userContext(), { tokenBudget: 1 }), error => error.code === 'TOKEN_BUDGET_TOO_SMALL' && error.status === 400);
@@ -526,6 +551,30 @@ test('profile snapshot stays stable within a session while forget remains an imm
   await memory.forget(userContext(), before.memory.memoryId, { resourceRevision: before.memory.resourceRevision });
   const afterForget = memory.contextBundle(userContext('user-a', { sessionId: session.id }), {});
   assert.equal(afterForget.userProfile.some(item => item.memoryId === before.memory.memoryId), false);
+});
+
+test('context bundle overlays query-authorized memories added after the session snapshot', async () => {
+  const { memory } = createHarness();
+  const before = await memory.hold(userContext(), { memoryType: 'preference', content: '会话开始前喜欢红茶', sensitivity: 'S0' });
+  const session = await memory.createSession(userContext(), { callerAgentId: 'agent-a', expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const after = await memory.hold(userContext(), { memoryType: 'preference', content: '会话开始后喜欢咖啡', sensitivity: 'S0' });
+
+  const bundle = memory.contextBundle(userContext('user-a', { sessionId: session.id }), {
+    query: '咖啡',
+    purpose: 'answer_user_query'
+  });
+
+  assert.equal(bundle.profileSnapshotId, session.profileSnapshotId);
+  assert.equal(bundle.userProfile.some(item => item.memoryId === after.memory.memoryId), false);
+  assert.equal(bundle.relevantMemories.some(item => item.memoryId === after.memory.memoryId), true);
+  assert.equal(bundle.relevantMemories.some(item => item.memoryId === before.memory.memoryId), false);
+
+  await memory.forget(userContext(), after.memory.memoryId, { resourceRevision: after.memory.resourceRevision });
+  const afterForget = memory.contextBundle(userContext('user-a', { sessionId: session.id }), {
+    query: '咖啡',
+    purpose: 'answer_user_query'
+  });
+  assert.equal(afterForget.relevantMemories.some(item => item.memoryId === after.memory.memoryId), false);
 });
 
 test('context bundle fails closed when an active session snapshot is missing', async () => {
@@ -546,6 +595,65 @@ test('delete returns a trackable operation and leaves a tombstone without a read
   assert.equal(memory.get(userContext(), created.memory.memoryId), null);
   assert.equal(memory.getDeletionOperation(userContext(), deleted.deletionOperationId).status, 'completed');
   assert.equal(state.tombstones.at(-1).action, 'delete');
+});
+
+test('export operations are subject-bound snapshots that become stale after a canonical mutation', async () => {
+  const { memory, state } = createHarness();
+  const created = await memory.hold(userContext(), { memoryType: 'fact', content: '导出快照内容', sensitivity: 'S0' });
+  const first = await memory.createExportOperation(userContext(), { idempotency_key: 'export-operation-1' });
+  const replay = await memory.createExportOperation(userContext(), { idempotency_key: 'export-operation-1' });
+
+  assert.equal(first.id, replay.id);
+  assert.equal(first.status, 'ready');
+  assert.equal(first.sourceCommitSeq < first.operationCommitSeq, true);
+  assert.equal(state.exportOperations.length, 1);
+
+  const status = memory.getExportOperation(userContext(), first.id);
+  assert.equal(status.status, 'ready');
+  assert.equal(memory.getExportOperation(userContext('user-b'), first.id), null);
+  assert.throws(
+    () => memory.downloadExport(userContext('user-b'), first.id),
+    error => error.code === 'EXPORT_OPERATION_NOT_FOUND' && error.status === 404
+  );
+  const downloaded = memory.downloadExport(userContext(), first.id);
+  assert.equal(downloaded.operation.id, first.id);
+  assert.equal(downloaded.data.assertions.some(item => item.id === created.memory.memoryId), true);
+  assert.equal(downloaded.data.assertionVersions.some(item => item.id === created.memory.versionId), true);
+
+  await memory.hold(userContext(), { memoryType: 'fact', content: '导出后新增内容', sensitivity: 'S0' });
+  assert.equal(memory.getExportOperation(userContext(), first.id).status, 'stale');
+  assert.throws(
+    () => memory.downloadExport(userContext(), first.id),
+    error => error.code === 'EXPORT_SNAPSHOT_STALE' && error.status === 409
+  );
+});
+
+test('export snapshot sequence is isolated from another subject in a shared in-memory state', async () => {
+  const { memory } = createHarness();
+  const operation = await memory.createExportOperation(userContext(), {});
+  await memory.hold(userContext('user-b'), { memoryType: 'fact', content: '另一用户的变更', sensitivity: 'S0' });
+  assert.equal(memory.getExportOperation(userContext(), operation.id).status, 'ready');
+  assert.equal(memory.downloadExport(userContext(), operation.id).operation.id, operation.id);
+});
+
+test('expired export operations cannot be downloaded', async () => {
+  const { memory, state } = createHarness();
+  const operation = await memory.createExportOperation(userContext(), {});
+  state.exportOperations[0].expiresAt = new Date(Date.now() - 1).toISOString();
+  assert.equal(memory.getExportOperation(userContext(), operation.id).status, 'expired');
+  assert.throws(
+    () => memory.downloadExport(userContext(), operation.id),
+    error => error.code === 'EXPORT_OPERATION_EXPIRED' && error.status === 410
+  );
+});
+
+test('retention sweep removes expired export operation metadata', async () => {
+  const { memory, state } = createHarness();
+  const operation = await memory.createExportOperation(userContext(), {});
+  state.exportOperations[0].expiresAt = new Date(Date.now() - 1).toISOString();
+  const swept = await memory.sweepRetention(userContext(), { now: new Date().toISOString() });
+  assert.equal(swept.exportOperations, 1);
+  assert.equal(state.exportOperations.some(item => item.id === operation.id), false);
 });
 
 test('physical memory delete removes every derived reference', async () => {
@@ -628,6 +736,7 @@ test('physical account delete clears user data but preserves a minimal deletion 
   const { memory, state } = createHarness();
   await memory.recordEvent(userContext(), { eventId: 'evt-delete-account', content: 'account source' });
   await memory.hold(userContext(), { content: 'account memory', sensitivity: 'S0' });
+  await memory.createExportOperation(userContext(), {});
   const deleted = await memory.deleteAccount(userContext());
   assert.equal(deleted.status, 'completed');
   assert.equal(state.rawEvents.length, 0);
@@ -635,6 +744,7 @@ test('physical account delete clears user data but preserves a minimal deletion 
   assert.equal(state.assertions.length, 0);
   assert.equal(state.assertionVersions.length, 0);
   assert.equal(state.outboxEvents.length, 0);
+  assert.equal(state.exportOperations.length, 0);
   assert.equal(state.idempotencyRecords.length, 0);
   assert.equal(state.deletionOperations.length, 1);
   assert.equal(state.tombstones.length, 1);

@@ -8,7 +8,7 @@
 2. Stable user profile：固定 `profile_snapshot_id` 的用户 Scope 内容。
 3. Relationship profile：只保留精确 caller agent 的关系 Scope。
 4. Current state：当前 session、未过期、带 TTL 的状态。
-5. Relevant episodes/retrieval：带 source/version evidence 的候选。
+5. Relevant memories/episodes/retrieval：当前查询命中的记忆与 episode，带 source/version evidence 的候选。
 6. Governance blocks/uncertainties：确认、冲突、无答案和降级信息。
 
 包装文本也计入 `tokenBudget`；截断顺序不能移除 Core、治理结果或 evidence metadata。普通 profile/episode 内容可压缩；若固定包装和治理元数据本身无法放入预算，API 必须返回 `TOKEN_BUDGET_TOO_SMALL`，不能返回超预算 Bundle。记忆内容作为 data，不得改变 system prompt、tool permission、auth context。
@@ -27,4 +27,4 @@ Token 包含 `sourceCommitSeq`、`privacyEpoch`、`grantVersion`。读取候选�
 
 ## Read-your-write
 
-显式写入在 canonical transaction 成功后立即可读；派生 projection/index/episode 可以稍后刷新。治理成功返回前 canonical 不可见，旧 snapshot/cache/index 不能绕过实时 privacy epoch。
+显式写入在 canonical transaction 成功后立即可读；派生 projection/index/episode 可以稍后刷新。活跃 session 的稳定 Profile Snapshot 不被普通写入改写，但当前查询命中的、已通过权限和生命周期校验的记忆会以 `relevantMemories` Overlay 进入本次 ContextBundle。治理成功返回前 canonical 不可见，旧 snapshot/cache/index 不能绕过实时 privacy epoch。

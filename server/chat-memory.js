@@ -25,6 +25,7 @@ function addMemoryItem(items, item, { type = null, summary = null } = {}) {
 
 export function memoryBundleToRecalled(bundle = {}) {
   const items = [];
+  for (const item of bundle.relevantMemories || []) addMemoryItem(items, item, { type: 'relevant' });
   for (const item of bundle.coreMemory || []) addMemoryItem(items, item, { type: 'core' });
   for (const item of bundle.userProfile || []) addMemoryItem(items, item, { type: item.memoryType || 'profile' });
   for (const item of bundle.relationshipProfile || []) addMemoryItem(items, item, { type: 'relationship' });

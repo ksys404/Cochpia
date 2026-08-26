@@ -3,10 +3,10 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 
 // 工作模式只读工具：ls / read / grep / find。全部只读，不写文件、不执行命令，安全。
-const ROOT = process.cwd();
+const ROOT = fs.realpathSync(process.cwd());
 const MAX_READ = 80 * 1024;
 const MAX_RESULTS = 200;
-const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', '.vite', 'Knowledge_Base']);
+const IGNORE = new Set(['node_modules', '.git', 'dist', 'build', '.vite', 'Knowledge_Base', '.deletions']);
 
 function* walk(dir, depth = 0) {
   if (depth > 8) return;
@@ -20,7 +20,33 @@ function* walk(dir, depth = 0) {
   }
 }
 
-const rel = p => path.relative(ROOT, p);
+const rel = p => path.relative(ROOT, p) || '.';
+
+const isWithinRoot = candidate => {
+  const relative = path.relative(ROOT, candidate);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+};
+
+const hasIgnoredSegment = candidate => path.relative(ROOT, candidate).split(path.sep).filter(Boolean).some(segment => IGNORE.has(segment));
+
+export function resolveWorkspacePath(input, { mustExist = false } = {}) {
+  const raw = String(input ?? '').trim();
+  if (!raw) throw new Error('Path is required');
+  const requested = path.resolve(ROOT, raw);
+  if (!isWithinRoot(requested)) throw new Error('Path is outside the workspace');
+  if (hasIgnoredSegment(requested)) throw new Error('Path is restricted by workspace policy');
+  if (fs.existsSync(requested)) {
+    const real = fs.realpathSync(requested);
+    if (!isWithinRoot(real)) throw new Error('Path resolves outside the workspace');
+    return real;
+  }
+  if (mustExist) throw new Error('Path does not exist');
+  let parent = path.dirname(requested);
+  while (!fs.existsSync(parent) && parent !== ROOT) parent = path.dirname(parent);
+  const realParent = fs.realpathSync(parent);
+  if (!isWithinRoot(realParent)) throw new Error('Path parent resolves outside the workspace');
+  return requested;
+}
 
 // 安全策略：拒绝读取可能含密钥的文件
 const SENSITIVE_NAME = /(^|\.)env(\..*)?$|\.pem$|\.key$|\.p12$|credential|secret/i;
@@ -36,8 +62,8 @@ export const WORK_TOOLS = [
     description: '列出目录内容（默认项目根目录），返回条目名和大小。',
     parameters: { type: 'object', properties: { dir: { type: 'string', description: '目录路径，可选，默认项目根目录' } } },
     async execute(args = {}) {
-      const dir = path.resolve(String(args.dir || '.'));
-      const entries = fs.readdirSync(dir, { withFileTypes: true }).slice(0, 100);
+      const dir = resolveWorkspacePath(args.dir || '.');
+      const entries = fs.readdirSync(dir, { withFileTypes: true }).filter(entry => !IGNORE.has(entry.name)).slice(0, 100);
       if (!entries.length) return '(空目录)';
       return entries.map(entry => {
         const full = path.join(dir, entry.name);
@@ -52,7 +78,7 @@ export const WORK_TOOLS = [
     description: '读取文件内容，返回文本。用于查看代码、配置、文档。',
     parameters: { type: 'object', properties: { path: { type: 'string', description: '要读取的文件路径（相对或绝对）' } }, required: ['path'] },
     async execute(args = {}) {
-      const file = path.resolve(String(args.path || ''));
+      const file = resolveWorkspacePath(args.path, { mustExist: true });
       if (SENSITIVE_NAME.test(path.basename(file))) return '（安全策略：拒绝读取该文件，可能包含敏感信息）';
       const stat = fs.statSync(file);
       if (!stat.isFile()) return `${rel(file)} 不是文件`;
@@ -105,7 +131,7 @@ export const WORK_TOOLS = [
     parameters: { type: 'object', properties: { path: { type: 'string', description: '要写入的文件路径' }, content: { type: 'string', description: '文件完整内容' } }, required: ['path', 'content'] },
     requiresApproval: true,
     async execute(args = {}) {
-      const file = path.resolve(String(args.path || ''));
+      const file = resolveWorkspacePath(args.path);
       if (SENSITIVE_NAME.test(path.basename(file))) return '（安全策略：拒绝写入敏感文件）';
       const content = String(args.content || '');
       fs.writeFileSync(file, content, 'utf8');
@@ -118,7 +144,7 @@ export const WORK_TOOLS = [
     parameters: { type: 'object', properties: { path: { type: 'string', description: '要修改的文件路径' }, oldText: { type: 'string', description: '要替换的原文（必须精确匹配）' }, newText: { type: 'string', description: '替换后的新文本' } }, required: ['path', 'oldText', 'newText'] },
     requiresApproval: true,
     async execute(args = {}) {
-      const file = path.resolve(String(args.path || ''));
+      const file = resolveWorkspacePath(args.path, { mustExist: true });
       if (SENSITIVE_NAME.test(path.basename(file))) return '（安全策略：拒绝修改敏感文件）';
       const oldText = String(args.oldText || '');
       const newText = String(args.newText || '');

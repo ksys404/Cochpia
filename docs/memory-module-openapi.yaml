@@ -385,6 +385,43 @@ paths:
         '200': {description: Deletion operation, content: {application/json: {schema: {$ref: '#/components/schemas/DeletionOperation'}}}}
         '404': {$ref: '#/components/responses/NotFound'}
 
+  /v1/export-operations:
+    post:
+      tags: [Governance]
+      summary: Create a subject-bound export snapshot operation
+      operationId: createExportOperation
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: false
+        content: {application/json: {schema: {$ref: '#/components/schemas/ExportOperationRequest'}}}
+      responses:
+        '201': {description: Export operation created, content: {application/json: {schema: {$ref: '#/components/schemas/ExportOperation'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+
+  /v1/export-operations/{export_operation_id}:
+    parameters: [{ $ref: '#/components/parameters/ExportOperationId' }]
+    get:
+      tags: [Governance]
+      summary: Read export snapshot operation status
+      operationId: getExportOperation
+      responses:
+        '200': {description: Export operation, content: {application/json: {schema: {$ref: '#/components/schemas/ExportOperation'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+
+  /v1/export-operations/{export_operation_id}/data:
+    parameters: [{ $ref: '#/components/parameters/ExportOperationId' }]
+    get:
+      tags: [Governance]
+      summary: Download a non-stale export snapshot
+      operationId: downloadExport
+      responses:
+        '200': {description: Export snapshot data, content: {application/json: {schema: {$ref: '#/components/schemas/ExportData'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '410': {$ref: '#/components/responses/NotFound'}
+
 components:
   parameters:
     IdempotencyKey:
@@ -430,6 +467,11 @@ components:
       schema: {type: string}
     DeletionOperationId:
       name: deletion_operation_id
+      in: path
+      required: true
+      schema: {type: string}
+    ExportOperationId:
+      name: export_operation_id
       in: path
       required: true
       schema: {type: string}
@@ -493,7 +535,36 @@ components:
         occurred_at: {type: [string, 'null'], format: date-time}
         is_stream_final: {type: boolean, default: true}
         storage_directive: {type: string, enum: [default, do_not_store], default: default}
-        metadata: {type: object, additionalProperties: false}
+        metadata:
+          type: object
+          additionalProperties: false
+          properties:
+            language: {type: string}
+            channel: {type: string}
+            source_label: {type: string}
+            client_revision: {type: string}
+            turn_id: {type: string}
+            sequence_no: {type: string}
+            schema_version: {type: integer, minimum: 1}
+            event_type: {type: string}
+            source_type: {type: string}
+            source_id: {type: string}
+            session_id: {type: string}
+            relationship_id: {type: string}
+            privacy_directive: {type: string, enum: [default, do_not_store, do_not_mention]}
+            request_id: {type: string}
+            trace_id: {type: string}
+            correlation_id: {type: string}
+            causation_id: {type: string}
+            producer: {type: string}
+            event_status: {type: string, enum: [partial, final, failed, superseded]}
+            run_id: {type: string}
+            parent_event_id: {type: string}
+            received_at: {type: string, format: date-time}
+            chunk_seq: {type: string}
+            attempt: {type: string}
+            completion_reason: {type: string}
+            resume_cursor: {type: string}
     EventWriteResponse:
       type: object
       additionalProperties: true
@@ -710,3 +781,33 @@ components:
         targetId: {type: string}
         action: {type: string, enum: [forget, delete]}
         status: {type: string}
+    ExportOperationRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        idempotency_key: {type: string, minLength: 1, maxLength: 200}
+    ExportOperation:
+      type: object
+      additionalProperties: true
+      required: [id, tenantId, subjectUserId, status, sourceCommitSeq, operationCommitSeq, requestedAt, expiresAt]
+      properties:
+        id: {type: string}
+        tenantId: {type: string}
+        subjectUserId: {type: string}
+        status: {type: string, enum: [ready, stale, expired]}
+        sourceCommitSeq: {type: integer, minimum: 0}
+        operationCommitSeq: {type: integer, minimum: 0}
+        requestedAt: {type: string, format: date-time}
+        completedAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+        resourceRevision: {type: integer, minimum: 1}
+        consistencyToken: {$ref: '#/components/schemas/ConsistencyToken'}
+    ExportData:
+      type: object
+      additionalProperties: true
+      required: [version, exportedAt, operation, data]
+      properties:
+        version: {type: integer, const: 1}
+        exportedAt: {type: string, format: date-time}
+        operation: {$ref: '#/components/schemas/ExportOperation'}
+        data: {type: object, additionalProperties: true}

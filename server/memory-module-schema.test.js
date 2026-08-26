@@ -26,7 +26,7 @@ test('Memory Module schema declares referenced tables before dependent tables', 
 
 test('Memory Module schema contains tenant, redaction, outbox, and idempotency controls', async () => {
   const schema = await readFile(schemaPath, 'utf8');
-  for (const table of ['redaction_epochs', 'memory_commit_sequences', 'memory_outbox_events', 'memory_audit_events', 'memory_idempotency_records', 'memory_mention_cooldowns', 'current_state_sources', 'profile_projection_sources']) {
+  for (const table of ['redaction_epochs', 'memory_commit_sequences', 'memory_outbox_events', 'memory_audit_events', 'memory_idempotency_records', 'memory_mention_cooldowns', 'memory_service_auth_nonces', 'current_state_sources', 'profile_projection_sources']) {
     assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
   }
   assert.match(schema, /UNIQUE \(tenant_id, user_id, event_id, source_revision\)/);
@@ -35,6 +35,8 @@ test('Memory Module schema contains tenant, redaction, outbox, and idempotency c
   assert.match(schema, /CREATE TABLE IF NOT EXISTS memory_outbox_events[\s\S]*user_id text,[\s\S]*event_type text/);
   assert.match(schema, /consumer_name text NOT NULL DEFAULT 'memory-derived'/);
   assert.match(schema, /memory_outbox_subject_pending_idx/);
+  assert.match(schema, /next_attempt_at timestamptz/);
+  assert.match(schema, /memory_outbox_due_idx/);
   assert.match(schema, /index_documents_search_tsv_idx/);
   assert.match(schema, /index_documents_search_trgm_idx/);
   assert.match(schema, /UNIQUE \(tenant_id, user_id, mutation_namespace, idempotency_key\)/);

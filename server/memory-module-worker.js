@@ -38,11 +38,13 @@ function isRedacted(state, event) {
 function claim(state, workerId, { now = new Date(), leaseMs = 30_000 } = {}) {
   const timestamp = nowMs(now);
   const event = state.outboxEvents.find(item => item.status === 'pending'
+    && (!item.nextAttemptAt || nowMs(item.nextAttemptAt) <= timestamp)
     || (item.status === 'processing' && item.leaseUntil && nowMs(item.leaseUntil) <= timestamp));
   if (!event) return null;
   event.status = 'processing';
   event.leaseOwner = workerId;
   event.leaseUntil = new Date(timestamp + leaseMs).toISOString();
+  event.nextAttemptAt = null;
   event.attempts = Number(event.attempts || 0) + 1;
   const attempt = { id: randomUUID(), outboxEventId: event.id, workerId, attempt: event.attempts, startedAt: new Date(timestamp).toISOString(), status: 'processing', errorCode: null };
   state.jobAttempts.push(attempt);
@@ -57,11 +59,15 @@ function assertLease(event, workerId, now = new Date()) {
   }
 }
 
-export function createMemoryModuleWorker({ state, persist = async () => {}, workerId = randomUUID(), processEvent = async () => ({ status: 'processed' }), maxAttempts = 5, leaseMs = 30_000, supportedSchemaVersions = [1] } = {}) {
+export function createMemoryModuleWorker({ state, persist = async () => {}, workerId = randomUUID(), processEvent = async () => ({ status: 'processed' }), maxAttempts = 5, leaseMs = 30_000, retryBackoffMs = attempt => Math.min(300_000, 1_000 * (2 ** Math.max(0, attempt - 1))), supportedSchemaVersions = [1] } = {}) {
   if (!state) throw new TypeError('Worker state is required');
   ensureWorkerState(state);
   if (!Array.isArray(supportedSchemaVersions) || !supportedSchemaVersions.length || supportedSchemaVersions.some(version => !Number.isInteger(Number(version)) || Number(version) < 1)) throw new TypeError('supportedSchemaVersions must contain positive integers');
   const acceptedSchemaVersions = [...new Set(supportedSchemaVersions.map(Number))];
+  const resolveRetryBackoffMs = attempt => {
+    const value = typeof retryBackoffMs === 'function' ? retryBackoffMs(attempt) : retryBackoffMs;
+    return Math.max(0, Math.min(300_000, Number(value) || 0));
+  };
 
   const runClaimed = async ({ event, attempt = null, now = new Date(), clock = () => new Date() } = {}) => {
     if (!event) return { status: 'idle' };
@@ -74,6 +80,7 @@ export function createMemoryModuleWorker({ state, persist = async () => {}, work
         event.status = 'dead_letter';
         event.result = 'unsupported_schema';
         event.lastErrorCode = schemaError.code;
+        event.nextAttemptAt = null;
         event.deliveredAt = new Date().toISOString();
         event.leaseOwner = null;
         event.leaseUntil = null;
@@ -92,6 +99,7 @@ export function createMemoryModuleWorker({ state, persist = async () => {}, work
         checkLiveLease();
         event.status = result?.status === 'feature_disabled' ? 'pending' : 'completed';
         event.result = result?.status || 'processed';
+        event.nextAttemptAt = event.status === 'pending' ? new Date(nowMs(clock()) + resolveRetryBackoffMs(event.attempts)).toISOString() : null;
       }
       event.deliveredAt = new Date().toISOString();
       event.leaseOwner = null;
@@ -110,6 +118,9 @@ export function createMemoryModuleWorker({ state, persist = async () => {}, work
       event.leaseUntil = null;
       if (code === 'WORKER_FENCED' || event.attempts >= maxAttempts) event.status = code === 'WORKER_FENCED' ? 'pending' : 'dead_letter';
       else event.status = 'pending';
+      event.nextAttemptAt = event.status === 'pending'
+        ? new Date(nowMs(clock()) + (code === 'WORKER_FENCED' ? 0 : resolveRetryBackoffMs(event.attempts))).toISOString()
+        : null;
       await persist();
       if (code === 'WORKER_FENCED') return { status: 'fenced', eventId: event.id, retryable: true };
       return { status: event.status, eventId: event.id, errorCode: code, retryable: event.status === 'pending' };

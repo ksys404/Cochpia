@@ -4,22 +4,26 @@
 
 ## 启动前检查
 
-- 生产配置：`AUTH_MODE=required`、`STORAGE_PROVIDER=postgres`、`DATABASE_SSL=true`/`verify-full`、`MEMORY_MODULE_SERVICE_TOKEN`。
+- 生产配置：`AUTH_MODE=required`、`STORAGE_PROVIDER=postgres`、`DATABASE_SSL=true`/`verify-full`、`MEMORY_MODULE_SERVICE_TOKEN`、`MEMORY_MODULE_SERVICE_AUTH_MODE=signed`、固定的 audience/issuer。生产 service-auth v1 会校验 method/path、timestamp、nonce 和 PostgreSQL replay ledger；不要用 static compatibility mode。
 - 迁移窗口显式运行 schema migration；稳定运行时建议 `MEMORY_MODULE_AUTO_MIGRATE=false`。
 - 默认关闭自动派生能力。需要灰度时逐项打开：`MEMORY_AUTO_EXTRACT`、`MEMORY_AUTO_PROFILE_UPDATE`、`MEMORY_HYBRID_RETRIEVAL`、`MEMORY_VECTOR_RETRIEVAL`、`MEMORY_EPISODE_GROUPING`。
 - `MEMORY_MODULE_REDIS_URL` 为可选派生缓存；缓存只服务 bounded ContextBundle read model，Redis 不可用时必须继续走 PostgreSQL canonical 路径，不得把缓存故障升级为治理或写入成功/失败语义。
 - `MEMORY_MODULE_WORKER_ENABLED=false` 可在故障时停派生 worker；显式记忆、读取和治理 API 不应因此失效。
 - 不在命令行、日志或工单中粘贴 `DATABASE_URL`、service token、model key 或用户正文。
-- 如果 production 启动报 `MEMORY_EXTERNAL_POLICY_REQUIRED`，先补齐 provider retention policy 并完成供应商 retention/region/training 审计；不要通过设置 `unknown` 绕过。
+- 如果 production 启动报 `MEMORY_EXTERNAL_POLICY_REQUIRED` 或 `MODEL_EXTERNAL_POLICY_REQUIRED`，先补齐对应 provider retention policy 并完成供应商 retention/region/training 审计；不要通过设置 `unknown` 绕过。
 
 ## 健康与降级
 
 - `/health` 失败：先检查数据库连通性、TLS、连接池和 schema；不要通过关闭认证或切换到共享 JSON 存储解决生产故障。
 - `/metrics` 返回请求 SLI（含 p50/p95/p99、状态计数和有界延迟样本数）以及 `operational.outbox`（状态/最老 backlog age）、`operational.index`（freshness、stale、privacy epoch mismatch）和 `operational.deletions`（传播状态/年龄）；这些字段只包含计数、时间和错误元数据，不包含正文。
+- PostgreSQL 主应用的 `cochpia_chat_stream_runs` 只保存 TTL 内、经过 sanitizer 的 SSE replay 数据；终态 run 可在重启后按 cursor replay，活跃 run 不会被另一进程静默接管。删除 session/account 时必须同时清理该表。
 - Model Gateway 超时/不可用：保留 raw event；candidate、projection 和 vector 派生延迟或关闭；显式记忆继续工作。
 - Redis/cache 超时或连接失败：记录无正文错误码并绕过缓存；不要关闭 canonical retrieve、治理或写入，也不要把 Redis 作为事实来源。
 - Index/vector 故障：回退结构化查询/BM25；不得把索引当作权限真相。
 - Worker backlog 增长：记录 `pending` 年龄、attempts、lease expiry、fencing、dead-letter；必要时先关闭对应 feature flag，再处理死信。
+- Retry backoff：失败的 pending event 由 `next_attempt_at` 控制下一次 claim，避免 provider/database outage 时同一事件热循环并饿死后续 backlog；恢复前不要手工清空该字段。
+- 发布或升级 worker 前，可用 `DATABASE_URL=... npm run test:memory-multiprocess` 在隔离 tenant 上启动两个独立 worker，确认同一 outbox 只消费一次、完成后 lease 清理、过期 lease 可接管且旧 worker completion 被 fencing；该命令缺少 `DATABASE_URL` 时安全跳过。
+- 可用 `npm run check:companion-outage-backlog` 执行虚拟时钟 backlog 演练，确认两轮 upstream outage 后退避增长、健康事件不被阻塞、恢复后 backlog 清空；该演练不替代生产 RPO/RTO。
 
 ## Outbox/worker 故障处理
 
@@ -34,9 +38,12 @@
 
 - 用户请求忘记：调用 `/v1/memories/{id}/forget` 或 `/v1/governance/forget`，随后验证 retrieve/context-bundle/snapshot/index/worker 都不可见。
 - 用户请求删除：调用 `/v1/governance/delete`，保存 `deletion_operation_id`，轮询 operation 状态，不把“API 成功”与“所有物理副本已清理”混为一谈。
+- 用户请求导出：调用 `POST /v1/export-operations`，保存 `export_operation_id`，先读取状态，再调用 `/v1/export-operations/{id}/data` 下载；若状态为 `stale`，重新创建 operation，不能把多个 operation 的数据拼接成一个快照。
+- 产品级导出调用 `POST /api/export-operations`，轮询 `GET /api/export-operations/{id}`，再下载 `GET /api/export-operations/{id}/data`。下载包含版本化 manifest、主应用数据、Memory Module snapshot 和 chat reconciliation；任何本地 data revision 或 Memory commit sequence 变化都必须重新创建 operation。旧 `GET /api/export` 只作为兼容的一次性下载入口。
+- 产品级 manifest 会明确列出缓存、日志、备份/PITR 和外部模型供应商的 owner 与当前责任边界。`excluded`/`metadata-only` 不等于已完成删除：上线前仍需 operator/provider retention、恢复重放和供应商审计证据。
 - 恢复 PITR：先停止对外流量；加载 canonical backup；重放独立 tombstone/redaction ledger；重建派生索引；执行负向检索；通过后再开放流量。
-- 恢复后的 JSON canonical snapshot 与独立删除账本可先通过 `MEMORY_RECOVERY_STATE=... MEMORY_RECOVERY_LEDGER=... npm run check:memory-recovery` 执行离线账本重放和负向泄漏检查；该检查只证明输入 artifact 的恢复门禁，不替代真实 PostgreSQL/PITR、RPO/RTO 演练。
-- 当前仓库已有内存态 recovery replay 测试；真实 PostgreSQL/PITR run 尚未执行，不能报告 RPO/RTO 已达标。
+- 恢复后的 JSON canonical snapshot 与独立删除账本可先通过 `MEMORY_RECOVERY_STATE=... MEMORY_RECOVERY_LEDGER=... npm run check:memory-recovery` 执行离线账本重放和负向泄漏检查；`npm run check:companion-pitr` 另有隔离 PostgreSQL/WAL recovery acceptance，验证删除前时间点恢复和 ledger 重放。
+- 当前仓库已有内存态 recovery replay 与隔离 PostgreSQL/PITR acceptance；该小型演练不等同于生产 RPO/RTO SLO，仍需托管环境、备份保留和故障注入证据。
 
 ## 指标告警映射
 

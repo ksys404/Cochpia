@@ -45,3 +45,25 @@ test('chat adapter remember is idempotent for regeneration and retry', async () 
   assert.equal(first.memory.memoryId, second.memory.memoryId);
   assert.equal(memoryState.assertions.length, 1);
 });
+
+test('chat adapter recalls a memory written after the current session snapshot', async () => {
+  const memoryState = createMemoryModuleState();
+  const state = { memoryModule: memoryState, memories: [] };
+  const memory = createMemoryModule(memoryState, async () => {});
+  const session = await memory.createSession(context(), { callerAgentId: 'cochpia', expiresAt: new Date(Date.now() + 60_000).toISOString() });
+  const adapter = createChatMemoryAdapter({
+    memoryModule: memory,
+    state,
+    context: { ...context(), sessionId: session.id }
+  });
+
+  const remembered = await adapter.remember({
+    messageId: 'same-session-memory',
+    content: '请记住：会话开始后我正在准备一个新项目',
+  });
+  const retrieved = await adapter.retrieve('会话开始后 新项目');
+
+  assert.equal(remembered.status, 'active');
+  assert.equal(retrieved.recalled.some(item => item.summary.includes('正在准备一个新项目')), true);
+  assert.equal(retrieved.recalled.some(item => item.type === 'relevant'), true);
+});

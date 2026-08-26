@@ -3,6 +3,12 @@ import { buildPostgresIndexCandidateQuery, mapPostgresIndexCandidate } from './m
 
 const userKey = context => `${context.tenantId}:${context.subjectUserId}`;
 
+async function queryInOrder(client, statements) {
+  const results = [];
+  for (const [sql, values] of statements) results.push(await client.query(sql, values));
+  return results;
+}
+
 const mapSession = row => ({
   id: row.id,
   tenantId: row.tenant_id,
@@ -289,6 +295,19 @@ const mapTombstone = row => ({
   createdAt: row.created_at
 });
 
+const mapExportOperation = row => ({
+  id: row.id,
+  tenantId: row.tenant_id,
+  subjectUserId: row.subject_user_id,
+  status: row.status,
+  sourceCommitSeq: Number(row.source_commit_seq),
+  operationCommitSeq: Number(row.operation_commit_seq),
+  requestedAt: row.requested_at,
+  completedAt: row.completed_at,
+  expiresAt: row.expires_at,
+  resourceRevision: Number(row.resource_revision || 1)
+});
+
 const mapOutbox = row => ({
   id: row.id,
   tenantId: row.tenant_id,
@@ -303,6 +322,7 @@ const mapOutbox = row => ({
   leaseUntil: row.lease_until,
   attempts: Number(row.attempts || 0),
   lastErrorCode: row.last_error_code,
+  nextAttemptAt: row.next_attempt_at,
   createdAt: row.created_at,
   deliveredAt: row.delivered_at
 });
@@ -315,12 +335,12 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
     async loadReadMetadata(context) {
       const client = await pool.connect();
       try {
-        const [sequence, redaction, grants, accessConfirmations, mentionCooldowns] = await Promise.all([
-          client.query('SELECT commit_seq FROM memory_commit_sequences WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT privacy_epoch FROM redaction_epochs WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT COALESCE(MAX(grant_version), 0) AS grant_version FROM scope_grants WHERE tenant_id=$1 AND subject_user_id=$2', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM access_confirmations WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM memory_mention_cooldowns WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId])
+        const [sequence, redaction, grants, accessConfirmations, mentionCooldowns] = await queryInOrder(client, [
+          ['SELECT commit_seq FROM memory_commit_sequences WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]],
+          ['SELECT privacy_epoch FROM redaction_epochs WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]],
+          ['SELECT COALESCE(MAX(grant_version), 0) AS grant_version FROM scope_grants WHERE tenant_id=$1 AND subject_user_id=$2', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM access_confirmations WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_mention_cooldowns WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]]
         ]);
         const commitSeq = Number(sequence.rows[0]?.commit_seq || 0);
         return {
@@ -569,27 +589,28 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
     async load(context) {
       const client = await pool.connect();
       try {
-        const [sessions, snapshots, projections, indexDocuments, episodes, rawEvents, assertions, versions, currentStates, grants, confirmations, accessConfirmations, mentionCooldowns, pins, deletions, tombstones, redaction, audits, idempotency, sequence] = await Promise.all([
-          client.query('SELECT * FROM memory_sessions WHERE tenant_id=$1 AND user_id=$2 ORDER BY started_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM profile_snapshots WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM profile_projections WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM index_documents WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM episodes WHERE tenant_id=$1 AND user_id=$2 ORDER BY observed_start', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM raw_events WHERE tenant_id=$1 AND user_id=$2 ORDER BY occurred_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM memory_assertions WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM assertion_versions WHERE tenant_id=$1 AND assertion_id IN (SELECT id FROM memory_assertions WHERE tenant_id=$1 AND user_id=$2) ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM current_states WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM scope_grants WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY issued_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM confirmation_requests WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM access_confirmations WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM memory_mention_cooldowns WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM pins WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM deletion_operations WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY requested_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM memory_tombstones WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM redaction_epochs WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT id,tenant_id,subject_user_id,actor_id,action,details,created_at FROM memory_audit_events WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT * FROM memory_idempotency_records WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]),
-          client.query('SELECT commit_seq FROM memory_commit_sequences WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId])
+        const [sessions, snapshots, projections, indexDocuments, episodes, rawEvents, assertions, versions, currentStates, grants, confirmations, accessConfirmations, mentionCooldowns, pins, deletions, tombstones, exportOperations, redaction, audits, idempotency, sequence] = await queryInOrder(client, [
+          ['SELECT * FROM memory_sessions WHERE tenant_id=$1 AND user_id=$2 ORDER BY started_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM profile_snapshots WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM profile_projections WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM index_documents WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM episodes WHERE tenant_id=$1 AND user_id=$2 ORDER BY observed_start', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM raw_events WHERE tenant_id=$1 AND user_id=$2 ORDER BY occurred_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_assertions WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM assertion_versions WHERE tenant_id=$1 AND assertion_id IN (SELECT id FROM memory_assertions WHERE tenant_id=$1 AND user_id=$2) ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM current_states WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM scope_grants WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY issued_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM confirmation_requests WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM access_confirmations WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_mention_cooldowns WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM pins WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM deletion_operations WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY requested_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_tombstones WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_export_operations WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY requested_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM redaction_epochs WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]],
+          ['SELECT id,tenant_id,subject_user_id,actor_id,action,details,created_at FROM memory_audit_events WHERE tenant_id=$1 AND subject_user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT * FROM memory_idempotency_records WHERE tenant_id=$1 AND user_id=$2 ORDER BY created_at', [context.tenantId, context.subjectUserId]],
+          ['SELECT commit_seq FROM memory_commit_sequences WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]]
         ]);
         const assertionIds = assertions.rows.map(row => row.id);
         const versionIds = versions.rows.map(row => row.id);
@@ -597,14 +618,13 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
         const projectionIds = projections.rows.map(row => row.id);
         const episodeIds = episodes.rows.map(row => row.id);
         const currentStateIds = currentStates.rows.map(row => row.id);
-        const [sources, snapshotItems, projectionItems, projectionSources, currentStateSources, episodeMembers, outbox] = await Promise.all([
-          versionIds.length ? client.query('SELECT * FROM assertion_version_sources WHERE tenant_id=$1 AND version_id = ANY($2::text[])', [context.tenantId, versionIds]) : { rows: [] },
-          snapshotIds.length ? client.query('SELECT * FROM profile_snapshot_items WHERE tenant_id=$1 AND snapshot_id = ANY($2::text[])', [context.tenantId, snapshotIds]) : { rows: [] },
-          projectionIds.length ? client.query('SELECT * FROM profile_projection_items WHERE tenant_id=$1 AND projection_id = ANY($2::text[])', [context.tenantId, projectionIds]) : { rows: [] },
-          projectionIds.length ? client.query('SELECT * FROM profile_projection_sources WHERE tenant_id=$1 AND projection_id = ANY($2::text[])', [context.tenantId, projectionIds]) : { rows: [] },
-          currentStateIds.length ? client.query('SELECT * FROM current_state_sources WHERE tenant_id=$1 AND current_state_id = ANY($2::text[])', [context.tenantId, currentStateIds]) : { rows: [] },
-          episodeIds.length ? client.query('SELECT * FROM episode_members WHERE tenant_id=$1 AND episode_id = ANY($2::text[])', [context.tenantId, episodeIds]) : { rows: [] },
-          client.query(`
+        const sources = versionIds.length ? await client.query('SELECT * FROM assertion_version_sources WHERE tenant_id=$1 AND version_id = ANY($2::text[])', [context.tenantId, versionIds]) : { rows: [] };
+        const snapshotItems = snapshotIds.length ? await client.query('SELECT * FROM profile_snapshot_items WHERE tenant_id=$1 AND snapshot_id = ANY($2::text[])', [context.tenantId, snapshotIds]) : { rows: [] };
+        const projectionItems = projectionIds.length ? await client.query('SELECT * FROM profile_projection_items WHERE tenant_id=$1 AND projection_id = ANY($2::text[])', [context.tenantId, projectionIds]) : { rows: [] };
+        const projectionSources = projectionIds.length ? await client.query('SELECT * FROM profile_projection_sources WHERE tenant_id=$1 AND projection_id = ANY($2::text[])', [context.tenantId, projectionIds]) : { rows: [] };
+        const currentStateSources = currentStateIds.length ? await client.query('SELECT * FROM current_state_sources WHERE tenant_id=$1 AND current_state_id = ANY($2::text[])', [context.tenantId, currentStateIds]) : { rows: [] };
+        const episodeMembers = episodeIds.length ? await client.query('SELECT * FROM episode_members WHERE tenant_id=$1 AND episode_id = ANY($2::text[])', [context.tenantId, episodeIds]) : { rows: [] };
+        const outbox = await client.query(`
             SELECT o.*
             FROM memory_outbox_events o
             LEFT JOIN raw_events raw ON raw.tenant_id = o.tenant_id AND raw.id = o.aggregate_id
@@ -612,8 +632,7 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
             WHERE o.tenant_id=$1
               AND (o.user_id=$2 OR (o.user_id IS NULL AND COALESCE(raw.user_id, assertion.user_id)=$2))
             ORDER BY o.created_at
-          `, [context.tenantId, context.subjectUserId])
-        ]);
+          `, [context.tenantId, context.subjectUserId]);
         const maxSequence = Math.max(0, ...rawEvents.rows.map(row => Number(row.commit_seq)), ...outbox.rows.map(row => Number(row.commit_seq)));
         return {
           rawEvents: rawEvents.rows.map(mapRawEvent),
@@ -639,6 +658,7 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
           scopeGrants: grants.rows.map(mapGrant),
           deletionOperations: deletions.rows.map(mapDeletionOperation),
           tombstones: tombstones.rows.map(mapTombstone),
+          exportOperations: exportOperations.rows.map(mapExportOperation),
           redactionEpochs: Object.fromEntries(redaction.rows.map(row => [userKey(context), Number(row.privacy_epoch)])),
           auditEvents: audits.rows.map(row => ({ id: row.id, tenantId: row.tenant_id, subjectUserId: row.subject_user_id, actorId: row.actor_id, action: row.action, details: row.details || {}, ...row.details, createdAt: row.created_at })),
           idempotencyRecords: idempotency.rows.map(row => ({ id: row.id, tenantId: row.tenant_id, userId: row.user_id, mutationNamespace: row.mutation_namespace || 'event', key: row.idempotency_key, requestFingerprint: row.request_fingerprint, response: row.response || {}, result: row.result, contentLength: row.content_length, contentType: row.content_type, resourceType: row.resource_type, resourceId: row.resource_id, responseContainsContent: row.response_contains_content === true, expiresAt: row.expires_at, createdAt: row.created_at })),
@@ -708,6 +728,7 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
         await client.query('DELETE FROM pins WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]);
         await client.query('DELETE FROM deletion_operations WHERE tenant_id=$1 AND subject_user_id=$2', [context.tenantId, context.subjectUserId]);
         await client.query('DELETE FROM memory_tombstones WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]);
+        await client.query('DELETE FROM memory_export_operations WHERE tenant_id=$1 AND subject_user_id=$2', [context.tenantId, context.subjectUserId]);
         await client.query('DELETE FROM redaction_epochs WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]);
         await client.query('DELETE FROM memory_audit_events WHERE tenant_id=$1 AND subject_user_id=$2', [context.tenantId, context.subjectUserId]);
         await client.query('DELETE FROM memory_idempotency_records WHERE tenant_id=$1 AND user_id=$2', [context.tenantId, context.subjectUserId]);
@@ -731,7 +752,7 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
           if (usePgvector) {
             await client.query('INSERT INTO index_documents (id,tenant_id,source_type,source_id,source_version,user_id,scope_type,relationship_agent_id,session_id,search_text,sensitivity,contextualizable,mentionable,redaction_epoch,policy_epoch,grant_version,embedding,embedding_vector,embedding_version,lexical_version,index_status,source_refs,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)', [document.id, context.tenantId, document.sourceType, document.sourceId, document.sourceVersion, context.subjectUserId, document.scopeType, document.relationshipAgentId, document.sessionId, document.searchText, document.sensitivity, document.contextualizable, document.mentionable, document.redactionEpoch, document.policyEpoch, document.grantVersion, document.embedding ? JSON.stringify(document.embedding) : null, document.embedding ? toPgvectorLiteral(document.embedding) : null, document.embeddingVersion, document.lexicalVersion, document.indexStatus, document.sourceRefs || [], document.createdAt]);
           } else {
-            await client.query('INSERT INTO index_documents (id,tenant_id,source_type,source_id,source_version,user_id,scope_type,relationship_agent_id,session_id,search_text,sensitivity,contextualizable,mentionable,redaction_epoch,policy_epoch,grant_version,embedding,embedding_version,lexical_version,index_status,source_refs,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)', [document.id, context.tenantId, document.sourceType, document.sourceId, document.sourceVersion, context.subjectUserId, document.scopeType, document.relationshipAgentId, document.sessionId, document.searchText, document.sensitivity, document.contextualizable, document.mentionable, document.redactionEpoch, document.policyEpoch, document.grantVersion, document.embedding || null, document.embeddingVersion, document.lexicalVersion, document.indexStatus, document.sourceRefs || [], document.createdAt]);
+            await client.query('INSERT INTO index_documents (id,tenant_id,source_type,source_id,source_version,user_id,scope_type,relationship_agent_id,session_id,search_text,sensitivity,contextualizable,mentionable,redaction_epoch,policy_epoch,grant_version,embedding,embedding_version,lexical_version,index_status,source_refs,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)', [document.id, context.tenantId, document.sourceType, document.sourceId, document.sourceVersion, context.subjectUserId, document.scopeType, document.relationshipAgentId, document.sessionId, document.searchText, document.sensitivity, document.contextualizable, document.mentionable, document.redactionEpoch, document.policyEpoch, document.grantVersion, document.embedding ? JSON.stringify(document.embedding) : null, document.embeddingVersion, document.lexicalVersion, document.indexStatus, document.sourceRefs || [], document.createdAt]);
           }
         }
         for (const episode of state.episodes) await client.query('INSERT INTO episodes (id,tenant_id,user_id,scope_type,relationship_agent_id,session_id,title,summary,observed_start,observed_end,grouping_rule_version,summary_model_version,status,resource_revision,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)', [episode.id, context.tenantId, context.subjectUserId, episode.scopeType, episode.relationshipAgentId, episode.sessionId, episode.title, episode.summary, episode.observedStart, episode.observedEnd, episode.groupingRuleVersion, episode.summaryModelVersion, episode.status, episode.resourceRevision, episode.createdAt, episode.updatedAt]);
@@ -745,9 +766,10 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
         for (const pin of state.pins) await client.query('INSERT INTO pins (id,tenant_id,user_id,assertion_id,pinned_version_id,follow_current,scope_type,resource_revision,created_at,revoked_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)', [pin.id, context.tenantId, context.subjectUserId, pin.assertionId, pin.pinnedVersionId, pin.followCurrent, pin.scopeType, pin.resourceRevision, pin.createdAt, pin.revokedAt]);
         for (const operation of state.deletionOperations) await client.query('INSERT INTO deletion_operations (id,tenant_id,subject_user_id,target_type,target_id,requested_scope,action,status,requested_by,requested_at,canonical_hidden_at,completed_at,redaction_epoch,last_error_code,resource_revision) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [operation.id, context.tenantId, context.subjectUserId, operation.targetType, operation.targetId, operation.requestedScope || {}, operation.action, operation.status, operation.requestedBy, operation.requestedAt, operation.canonicalHiddenAt, operation.completedAt, operation.redactionEpoch, operation.lastErrorCode, operation.resourceRevision]);
         for (const tombstone of state.tombstones) await client.query('INSERT INTO memory_tombstones (id,tenant_id,user_id,target_type,target_id,action,redaction_epoch,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [tombstone.id, context.tenantId, context.subjectUserId, tombstone.targetType, tombstone.targetId, tombstone.action, tombstone.redactionEpoch, tombstone.createdAt]);
+        for (const operation of state.exportOperations || []) await client.query('INSERT INTO memory_export_operations (id,tenant_id,subject_user_id,status,source_commit_seq,operation_commit_seq,requested_at,completed_at,expires_at,resource_revision) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)', [operation.id, context.tenantId, context.subjectUserId, operation.status || 'ready', operation.sourceCommitSeq, operation.operationCommitSeq, operation.requestedAt, operation.completedAt, operation.expiresAt, operation.resourceRevision || 1]);
         const epoch = state.redactionEpochs[userKey(context)] || 0;
         await client.query('INSERT INTO redaction_epochs (tenant_id,user_id,privacy_epoch,updated_at) VALUES ($1,$2,$3,now())', [context.tenantId, context.subjectUserId, epoch]);
-        for (const event of state.outboxEvents) await client.query('INSERT INTO memory_outbox_events (id,tenant_id,user_id,consumer_name,event_type,aggregate_id,schema_version,commit_seq,status,lease_owner,lease_until,attempts,last_error_code,created_at,delivered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [event.id, context.tenantId, event.userId || context.subjectUserId, event.consumerName || 'memory-derived', event.type, event.aggregateId, event.schemaVersion, event.commitSeq, event.status, event.leaseOwner || null, event.leaseUntil || null, event.attempts || 0, event.lastErrorCode || null, event.createdAt, event.deliveredAt || null]);
+        for (const event of state.outboxEvents) await client.query('INSERT INTO memory_outbox_events (id,tenant_id,user_id,consumer_name,event_type,aggregate_id,schema_version,commit_seq,status,lease_owner,lease_until,attempts,last_error_code,next_attempt_at,created_at,delivered_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)', [event.id, context.tenantId, event.userId || context.subjectUserId, event.consumerName || 'memory-derived', event.type, event.aggregateId, event.schemaVersion, event.commitSeq, event.status, event.leaseOwner || null, event.leaseUntil || null, event.attempts || 0, event.lastErrorCode || null, event.nextAttemptAt || null, event.createdAt, event.deliveredAt || null]);
         for (const event of state.auditEvents) await client.query('INSERT INTO memory_audit_events (id,tenant_id,subject_user_id,actor_id,action,details,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)', [event.id, context.tenantId, context.subjectUserId, event.actorId, event.action, event.details || {}, event.createdAt]);
         for (const record of state.idempotencyRecords) await client.query('INSERT INTO memory_idempotency_records (id,tenant_id,user_id,mutation_namespace,idempotency_key,request_fingerprint,response,result,content_length,content_type,resource_type,resource_id,response_contains_content,expires_at,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [record.id, context.tenantId, context.subjectUserId, record.mutationNamespace || 'event', record.key, record.requestFingerprint || '', record.response || {}, record.result || null, record.contentLength ?? null, record.contentType || null, record.resourceType || null, record.resourceId || null, Boolean(record.responseContainsContent), record.expiresAt || null, record.createdAt]);
         await client.query('INSERT INTO memory_commit_sequences (tenant_id,user_id,commit_seq,updated_at) VALUES ($1,$2,$3,now()) ON CONFLICT (tenant_id,user_id) DO UPDATE SET commit_seq=EXCLUDED.commit_seq, updated_at=now()', [context.tenantId, context.subjectUserId, state.sequence]);
@@ -774,7 +796,7 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
             FROM memory_outbox_events o
             LEFT JOIN raw_events raw ON raw.tenant_id = o.tenant_id AND raw.id = o.aggregate_id
             LEFT JOIN memory_assertions assertion ON assertion.tenant_id = o.tenant_id AND assertion.id = o.aggregate_id
-            WHERE (o.status = 'pending' OR (o.status = 'processing' AND o.lease_until IS NOT NULL AND o.lease_until <= $2::timestamptz))
+            WHERE ((o.status = 'pending' AND (o.next_attempt_at IS NULL OR o.next_attempt_at <= $2::timestamptz)) OR (o.status = 'processing' AND o.lease_until IS NOT NULL AND o.lease_until <= $2::timestamptz))
               AND ($4::text[] IS NULL OR o.event_type = ANY($4::text[]))
               AND o.consumer_name = $5
               AND COALESCE(o.user_id, raw.user_id, assertion.user_id) IS NOT NULL
@@ -802,11 +824,11 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
       }
     },
 
-    async finishOutboxEvent({ eventId, workerId, status = 'completed', result = null, errorCode = null } = {}) {
+    async finishOutboxEvent({ eventId, workerId, status = 'completed', result = null, errorCode = null, nextAttemptAt = null } = {}) {
       if (!eventId || !workerId) throw new TypeError('eventId and workerId are required');
       const client = await pool.connect();
       try {
-        const response = await client.query('UPDATE memory_outbox_events SET status=$1, last_error_code=$2, delivered_at=CASE WHEN $1 = \'completed\' THEN now() ELSE delivered_at END, lease_owner=NULL, lease_until=NULL WHERE id=$3 AND lease_owner=$4 AND status=\'processing\' RETURNING id', [status, errorCode, eventId, workerId]);
+        const response = await client.query('UPDATE memory_outbox_events SET status=$1, last_error_code=$2, next_attempt_at=CASE WHEN $1 = \'pending\' THEN COALESCE($3::timestamptz, now()) ELSE NULL END, delivered_at=CASE WHEN $1 = \'completed\' THEN now() ELSE delivered_at END, lease_owner=NULL, lease_until=NULL WHERE id=$4 AND lease_owner=$5 AND status=\'processing\' RETURNING id', [status, errorCode, nextAttemptAt, eventId, workerId]);
         return { updated: response.rowCount === 1, eventId, status, result };
       } finally {
         client.release();
@@ -842,6 +864,10 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
             SELECT tenant_id, user_id
             FROM memory_idempotency_records
             WHERE mutation_namespace <> 'event' AND expires_at IS NOT NULL AND expires_at <= $1::timestamptz
+            UNION
+            SELECT tenant_id, subject_user_id AS user_id
+            FROM memory_export_operations
+            WHERE expires_at <= $1::timestamptz
           ) due
           ORDER BY tenant_id, user_id
           LIMIT $2
@@ -855,15 +881,14 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
     async getOperationalMetrics({ now = new Date() } = {}) {
       const client = await pool.connect();
       try {
-        const [outbox, index, deletions] = await Promise.all([
-          client.query(`
+        const outbox = await client.query(`
             SELECT status,
                    COUNT(*)::bigint AS count,
                    COALESCE(EXTRACT(EPOCH FROM ($1::timestamptz - MIN(created_at)))::bigint, 0) AS oldest_age_seconds
               FROM memory_outbox_events
              GROUP BY status
-          `, [new Date(now).toISOString()]),
-          client.query(`
+          `, [new Date(now).toISOString()]);
+        const index = await client.query(`
             SELECT
               COUNT(*)::bigint AS total,
               COUNT(*) FILTER (WHERE d.index_status='active')::bigint AS active,
@@ -876,15 +901,14 @@ export function createMemoryModulePostgresRepository(pool, { pgvector = false, c
             FROM index_documents d
             LEFT JOIN memory_assertions a ON a.tenant_id=d.tenant_id AND a.id=d.source_id
             LEFT JOIN redaction_epochs redaction ON redaction.tenant_id=d.tenant_id AND redaction.user_id=d.user_id
-          `),
-          client.query(`
+          `);
+        const deletions = await client.query(`
             SELECT status,
                    COUNT(*)::bigint AS count,
                    COALESCE(EXTRACT(EPOCH FROM ($1::timestamptz - MIN(requested_at)))::bigint, 0) AS oldest_age_seconds
               FROM deletion_operations
              GROUP BY status
-          `, [new Date(now).toISOString()])
-        ]);
+          `, [new Date(now).toISOString()]);
         const byStatus = rows => Object.fromEntries(rows.map(row => [row.status, { count: Number(row.count || 0), oldestAgeSeconds: Number(row.oldest_age_seconds || 0) }]));
         const indexRow = index.rows[0] || {};
         return {

@@ -149,3 +149,19 @@ test('service worker passes the claimed outbox lease to PostgreSQL state saves',
   assert.equal(fences[0].fenceWorkerId, 'fenced-worker');
   assert.equal(fences[0].fenceEventId, state.outboxEvents[0].id);
 });
+
+test('service worker invokes the claim hook before processing a leased event', async () => {
+  const state = createMemoryModuleState();
+  const memory = createMemoryModule(state);
+  await memory.recordEvent(context, { eventId: 'claim-hook-event', content: 'claim hook probe' });
+  let observed = null;
+  const worker = createMemoryModuleServiceWorker({
+    repository: fakeRepository(state),
+    featureFlags: { autoExtract: false, autoProfileUpdate: true, hybridRetrieval: false, vectorRetrieval: false, episodeGrouping: false, proactiveMention: false },
+    onClaim: async ({ event, workerId }) => { observed = { eventId: event.id, workerId }; }
+  });
+  const result = await worker.runOnce();
+  assert.equal(result.status, 'completed');
+  assert.equal(observed.eventId, state.outboxEvents[0].id);
+  assert.equal(observed.workerId, worker.workerId);
+});

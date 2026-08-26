@@ -2,6 +2,7 @@ import { createMemoryModule, createMemoryModuleState } from './memory-module.js'
 import { createMemoryModuleRouter } from './memory-module-api.js';
 import { resolveMemoryFeatureFlags } from './memory-module-flags.js';
 import { createChatMemoryAdapter } from './chat-memory.js';
+import { buildIdentityRelationshipContext } from './identity-relationship-context.js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value)));
 
@@ -9,10 +10,11 @@ function asNumber(value, fallback) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
 }
 
-function toLegacyMemory(item, { revokedAt = null } = {}) {
+function toLegacyMemory(item, { revokedAt = null, contentOverride = undefined } = {}) {
   if (!item) return null;
   const status = item.status || 'active';
-  const content = item.content ?? item.value ?? item.summary ?? '';
+  const contentVisible = !['revoked', 'forgotten', 'deleted', 'rejected', 'expired', 'superseded'].includes(status);
+  const content = contentOverride ?? (contentVisible ? item.content ?? item.value ?? item.summary ?? '' : '');
   return {
     id: item.memoryId || item.id,
     type: item.memoryType || item.type || 'fact',
@@ -28,6 +30,8 @@ function toLegacyMemory(item, { revokedAt = null } = {}) {
     importance: clamp(item.importance ?? 0.5, 0, 1),
     metadata: { memoryId: item.memoryId || item.id, versionId: item.versionId || null, scope: item.scope || null },
     status,
+    pinned: Boolean(item.pinned),
+    pinnedVersionId: item.pinnedVersionId || null,
     sensitivity: item.sensitivity || 'S0',
     resourceRevision: item.resourceRevision || 1,
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
@@ -45,6 +49,15 @@ function legacyInput(input = {}) {
     sourceEventId: input.sourceEventId ?? input.source_event ?? null,
     idempotency_key: input.idempotency_key || input.idempotencyKey || undefined
   };
+}
+
+function compatibilityMutationInput(input = {}) {
+  const value = input && typeof input === 'object' && !Array.isArray(input) ? { ...input } : {};
+  const idempotencyKey = value.idempotency_key || value.idempotencyKey;
+  const resourceRevision = value.resource_revision ?? value.resourceRevision;
+  if (idempotencyKey) value.idempotency_key = idempotencyKey;
+  if (resourceRevision != null) value.resource_revision = resourceRevision;
+  return value;
 }
 
 export function createMemoryModuleRuntime({
@@ -66,29 +79,51 @@ export function createMemoryModuleRuntime({
     return state;
   };
 
-  const contextFromRequest = (req, { chat = false } = {}) => {
+  const contextFromRequest = (req, { chat = false, sessionId = undefined } = {}) => {
     const user = getUser(req) || { id: 'local-user' };
     const allowDevelopmentAgentHeaders = process.env.NODE_ENV !== 'production' && process.env.MEMORY_ALLOW_UNTRUSTED_AGENT_HEADERS === 'true';
     const actorType = allowDevelopmentAgentHeaders ? (req.get('x-memory-actor-type') || 'user') : 'user';
     const callerAgentId = allowDevelopmentAgentHeaders ? (req.get('x-caller-agent-id') || req.get('x-agent-id') || 'cochpia') : 'cochpia';
-    return {
+    return buildIdentityRelationshipContext({
       tenantId,
       subjectUserId: user.id,
       actorType,
       actorId: actorType === 'user' ? user.id : callerAgentId,
       callerAgentId,
-      sessionId: chat ? null : req.body?.session_id || req.query?.session_id || null
-    };
+      sessionId: sessionId !== undefined ? sessionId : (chat ? null : req.body?.session_id || req.query?.session_id || null),
+      requestId: req?.requestId || null,
+      traceId: req?.traceId || null
+    });
   };
 
   const moduleForRequest = req => {
     const state = stateForRequest(req);
+    const memoryState = state.memoryModule;
     let module = instances.get(state);
-    if (!module) {
-      module = createMemoryModule(state.memoryModule, () => persistState(state), { featureFlags });
+    if (!module || module.state !== memoryState) {
+      module = createMemoryModule(memoryState, () => persistState(state), { featureFlags });
       instances.set(state, module);
     }
     return module;
+  };
+
+  const ensureChatSession = async (req, applicationSessionId) => {
+    const sessionId = String(applicationSessionId || '').trim().slice(0, 200);
+    if (!sessionId) throw Object.assign(new Error('Application session id is required'), { code: 'SESSION_ID_REQUIRED', status: 400 });
+    const state = stateForRequest(req);
+    const module = moduleForRequest(req);
+    const context = contextFromRequest(req, { chat: true });
+    state.companion ||= {};
+    state.companion.sessionMappings ||= {};
+    const memorySessionId = String(state.companion.sessionMappings[sessionId] || sessionId).slice(0, 200);
+    const existing = module.state.sessions.find(item => item.id === memorySessionId && item.tenantId === context.tenantId && item.userId === context.subjectUserId);
+    if (existing && existing.status !== 'active') throw Object.assign(new Error('Memory session is not active'), { code: 'MEMORY_SESSION_NOT_ACTIVE', status: 409 });
+    if (!existing) await module.createSession(context, { id: memorySessionId, callerAgentId: context.callerAgentId });
+    if (state.companion.sessionMappings[sessionId] !== memorySessionId) {
+      state.companion.sessionMappings[sessionId] = memorySessionId;
+      await persistState(state);
+    }
+    return memorySessionId;
   };
 
   const ensureLegacyImport = async (req, module, state, context) => {
@@ -143,6 +178,42 @@ export function createMemoryModuleRuntime({
       return module.get(context, id, { purpose: 'governance' });
     };
 
+    const toCompatibilityMemory = item => {
+      if (!item) return null;
+      let contentOverride;
+      if (!item.content && ['candidate', 'pending_confirmation'].includes(item.status)) {
+        const assertion = module.state.assertions.find(candidate => candidate.id === item.memoryId);
+        const version = assertion && module.state.assertionVersions.find(candidate => candidate.id === assertion.currentVersionId);
+        contentOverride = version?.content;
+      }
+      return toLegacyMemory(item, { contentOverride });
+    };
+
+    const mutationInputFor = (input, { id, current = null, namespace } = {}) => {
+      const value = compatibilityMutationInput(input);
+      if (value.resource_revision == null && current?.resourceRevision != null) value.resource_revision = current.resourceRevision;
+      if (!value.idempotency_key && value.resource_revision != null && id) {
+        value.idempotency_key = `legacy-${namespace}:${id}:${value.resource_revision}`;
+      }
+      return value;
+    };
+
+    const mutationResult = (result, { fallback = null, contentOverride = undefined } = {}) => {
+      if (!result || typeof result !== 'object') return result ?? fallback;
+      const canonical = result.memory || result.currentState || (result.memoryId || result.id ? result : null);
+      if (!canonical) return result;
+      const legacy = toLegacyMemory(canonical, { contentOverride: contentOverride ?? (result.confirmation?.proposedContent && canonical.status === 'pending_confirmation' ? result.confirmation.proposedContent : undefined) });
+      if (!legacy) return result;
+      return {
+        ...legacy,
+        ...(result.status && result.status !== legacy.status ? { lifecycleStatus: result.status } : {}),
+        ...(result.confirmation ? { confirmation: result.confirmation } : {}),
+        ...(result.consistencyToken ? { consistencyToken: result.consistencyToken } : {}),
+        ...(result.redactionEpoch != null ? { redactionEpoch: result.redactionEpoch } : {}),
+        ...(result.deletionOperationId ? { deletionOperationId: result.deletionOperationId } : {})
+      };
+    };
+
     return {
       listTools: () => ['breath', 'hold', 'dream'],
       async breath(query, limit = 5) {
@@ -155,45 +226,87 @@ export function createMemoryModuleRuntime({
         const normalized = legacyInput(input);
         if (!normalized.content) throw new Error('Memory summary is required');
         const result = await module.hold(context, normalized);
-        return toLegacyMemory(result.memory || result.currentState);
+        return mutationResult(result);
       },
       async list(options = {}) {
         await ensure();
         const includeRevoked = options.includeRevoked === true || options.includeRevoked === 'true';
-        const items = module.list(context, { ...options, purpose: includeRevoked ? 'governance' : 'profile_view', limit: options.limit || 100 });
-        return items.map(item => toLegacyMemory(item));
+        const includeGovernance = includeRevoked
+          || options.includeCandidates === true
+          || options.includeCandidates === 'true'
+          || options.status != null
+          || options.purpose === 'governance';
+        const items = module.list(context, { ...options, purpose: includeGovernance ? 'governance' : 'profile_view', limit: options.limit || 100 });
+        return items.map(toCompatibilityMemory);
       },
       async get(id) {
         const item = await getCurrent(id);
-        return toLegacyMemory(item);
+        return toCompatibilityMemory(item);
       },
       async update(id, input = {}) {
         const current = await getCurrent(id);
         if (!current) return null;
+        const normalized = mutationInputFor(input, { id, current, namespace: 'correct' });
         const result = await module.correct(context, id, {
-          ...input,
-          content: input.content ?? input.summary ?? current.content,
-          resourceRevision: input.resourceRevision ?? current.resourceRevision,
-          idempotency_key: input.idempotency_key || input.idempotencyKey || `legacy-correct:${id}:${current.resourceRevision}`
+          ...normalized,
+          content: input.content ?? input.summary ?? current.content
         });
-        return toLegacyMemory(result.memory || result);
+        return mutationResult(result);
       },
-      async remove(id) {
+      async promote(id, input = {}) {
+        const current = await getCurrent(id);
+        if (!current) return null;
+        const result = await module.promoteCandidate(context, id, mutationInputFor(input, { id, current, namespace: 'promote' }));
+        return mutationResult(result);
+      },
+      async pin(id, input = {}) {
+        const current = await getCurrent(id);
+        if (!current) return null;
+        const result = await module.pin(context, id, mutationInputFor(input, { id, current, namespace: 'pin' }));
+        return mutationResult(result);
+      },
+      async unpin(id, input = {}) {
+        const current = await getCurrent(id);
+        if (!current) return null;
+        const result = await module.unpin(context, id, mutationInputFor(input, { id, current, namespace: 'unpin' }));
+        return mutationResult(result);
+      },
+      async forget(id, input = {}) {
+        const current = await getCurrent(id);
+        if (!current) return null;
+        const result = await module.forget(context, id, mutationInputFor(input, { id, current, namespace: 'forget' }));
+        return mutationResult({ ...result, memory: { ...current, status: 'forgotten' } });
+      },
+      async confirm(id, input = {}) {
+        await ensure();
+        const result = await module.confirm(context, id, compatibilityMutationInput(input));
+        return mutationResult(result);
+      },
+      async reject(id, input = {}) {
+        await ensure();
+        const result = await module.reject(context, id, compatibilityMutationInput(input));
+        return mutationResult(result);
+      },
+      async listConfirmations(options = {}) {
+        await ensure();
+        return module.listConfirmations(context, { ...options, returnPage: options.returnPage !== false });
+      },
+      async remove(id, input = {}) {
         const current = await getCurrent(id);
         if (!current) return false;
-        await module.remove(context, id, { resourceRevision: current.resourceRevision, idempotency_key: `legacy-delete:${id}:${current.resourceRevision}` });
+        await module.remove(context, id, mutationInputFor(input, { id, current, namespace: 'delete' }));
         return true;
       },
-      async revoke(id) {
+      async revoke(id, input = {}) {
         const current = await getCurrent(id);
         if (!current) return null;
         const revokedAt = new Date().toISOString();
-        await module.revoke(context, id, { resourceRevision: current.resourceRevision, idempotency_key: `legacy-revoke:${id}:${current.resourceRevision}` });
-        return toLegacyMemory({ ...current, status: 'revoked' }, { revokedAt });
+        const result = await module.revoke(context, id, mutationInputFor(input, { id, current, namespace: 'revoke' }));
+        return { ...mutationResult({ ...result, memory: { ...current, status: 'revoked' } }), revokedAt };
       },
       async exportMemories() {
         await ensure();
-        return module.list(context, { purpose: 'governance', limit: 1000 }).map(item => toLegacyMemory(item));
+        return module.list(context, { purpose: 'governance', limit: 1000 }).map(toCompatibilityMemory);
       },
       async dream(limit = 5) {
         const items = await this.list({ limit });
@@ -205,6 +318,7 @@ export function createMemoryModuleRuntime({
   return {
     moduleForRequest,
     contextFromRequest,
+    ensureChatSession,
     async prepareForRequest(req) {
       const state = stateForRequest(req);
       const module = moduleForRequest(req);
@@ -213,19 +327,20 @@ export function createMemoryModuleRuntime({
       return module;
     },
     compatibilityForRequest,
-    chatForRequest(req) {
+    chatForRequest(req, sessionId = undefined) {
       const state = stateForRequest(req);
       return createChatMemoryAdapter({
         memoryModule: moduleForRequest(req),
         state,
-        context: contextFromRequest(req, { chat: true }),
+        context: contextFromRequest(req, { chat: true, sessionId }),
         persistState: () => persistState(state)
       });
     },
-    router() {
+    router(options = {}) {
       return createMemoryModuleRouter({
         memoryModuleForRequest: req => this.prepareForRequest(req),
-        contextFromRequest
+        contextFromRequest,
+        ...options
       });
     }
   };

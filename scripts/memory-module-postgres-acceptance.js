@@ -13,6 +13,7 @@ import { rebuildIndexDocumentsAsync } from '../server/memory-module-index.js';
 import { normalizeEmbeddingDimensions, buildPgvectorMigrationSql } from '../server/memory-module-pgvector.js';
 import { buildPostgresIndexCandidateQuery } from '../server/memory-module-postgres-retrieval.js';
 import { createMemoryModulePostgresRepository } from '../server/memory-module-postgres.js';
+import { applyMemoryModuleSchema } from '../server/memory-module-pg-migration.js';
 
 if (!process.env.DATABASE_URL) {
   console.log(JSON.stringify({ event: 'memory_module_postgres_acceptance_skipped', reason: 'DATABASE_URL_not_configured' }));
@@ -39,6 +40,7 @@ const subjectUserId = `memory-acceptance-${randomUUID()}`;
 const context = { tenantId, subjectUserId, actorType: 'user', actorId: subjectUserId, callerAgentId: 'cochpia' };
 const agentA = { tenantId, subjectUserId, actorType: 'agent', actorId: 'agent-a', callerAgentId: 'agent-a' };
 const schemaPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../server/memory-module-schema.sql');
+let stage = 'startup';
 
 const cleanupQueries = [
   'DELETE FROM memory_outbox_events WHERE tenant_id=$1',
@@ -57,6 +59,7 @@ const cleanupQueries = [
   'DELETE FROM pins WHERE tenant_id=$1',
   'DELETE FROM deletion_operations WHERE tenant_id=$1',
   'DELETE FROM memory_tombstones WHERE tenant_id=$1',
+  'DELETE FROM memory_export_operations WHERE tenant_id=$1',
   'DELETE FROM redaction_epochs WHERE tenant_id=$1',
   'DELETE FROM memory_audit_events WHERE tenant_id=$1',
   'DELETE FROM memory_idempotency_records WHERE tenant_id=$1',
@@ -100,9 +103,12 @@ function collectPlanNodes(value, nodes = []) {
 }
 
 try {
+  stage = 'schema';
   if (applySchema) {
-    await pool.query(await readFile(schemaPath, 'utf8'));
-    if (usePgvector) await pool.query(buildPgvectorMigrationSql(configuredDimensions));
+    await applyMemoryModuleSchema(pool, {
+      schema: await readFile(schemaPath, 'utf8'),
+      pgvectorSql: usePgvector ? buildPgvectorMigrationSql(configuredDimensions) : ''
+    });
   }
   if (usePgvector) {
     const readiness = await pool.query(`
@@ -116,6 +122,7 @@ try {
     assert.equal(readiness.rows[0]?.column_ready, true, 'index_documents.embedding_vector is not present');
   }
 
+  stage = 'seed';
   let state = await repository.load(context);
   let memory = createMemoryModule(state, async () => {});
   const primary = await memory.hold(context, { content: 'acceptance green tea preference', sensitivity: 'S0', memoryType: 'preference' });
@@ -131,8 +138,10 @@ try {
     dataRetentionPolicy: 'fixture-no-external-transfer'
   });
   await rebuildIndexDocumentsAsync(memory.state, { tenantId, userId: subjectUserId, embeddingGateway });
+  stage = 'persist-indexed-state';
   await repository.save(context, memory.state);
 
+  stage = 'lexical-search';
   const lexical = await repository.searchIndexDocuments(agentA, { query: 'green tea', purpose: 'profile_view', mode: 'lexical' });
   assert.equal(lexical.some(item => item.memoryId === primary.memory.memoryId), true);
   assert.equal(lexical.some(item => item.memoryId === relationshipA.memory.memoryId), false);
@@ -144,6 +153,7 @@ try {
     hybridRetrieval: true,
     vectorRetrieval: false
   });
+  stage = 'native-retrieval';
   const hybrid = await nativeRetriever(agentA, { query: 'green tea', purpose: 'profile_view', requireNativeRetrieval: true });
   if (usePgvector) {
     assert.equal(hybrid.retrievalMode, 'postgres_hybrid_rrf');
@@ -155,6 +165,7 @@ try {
   let planNodes = [];
   let hnswObserved = false;
   if (usePgvector) {
+    stage = 'vector-plan';
     const vectorQuery = buildPostgresIndexCandidateQuery({
       tenantId,
       subjectUserId,
@@ -165,22 +176,25 @@ try {
       queryVector: vector,
       mode: 'vector'
     });
-    await pool.query('BEGIN');
+    const planClient = await pool.connect();
     let planResult;
     try {
       // Small acceptance fixtures are too tiny for the planner to prefer HNSW;
       // force an index-capable plan so the migration is verified independently
       // from the cost choice made for a production-sized table.
-      await pool.query('SET LOCAL enable_seqscan = off');
-      planResult = await pool.query(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${vectorQuery.sql}`, vectorQuery.params);
+      await planClient.query('BEGIN');
+      await planClient.query('SET LOCAL enable_seqscan = off');
+      planResult = await planClient.query(`EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${vectorQuery.sql}`, vectorQuery.params);
+      await planClient.query('ROLLBACK');
     } finally {
-      await pool.query('ROLLBACK');
+      planClient.release();
     }
     planNodes = collectPlanNodes(planResult.rows[0]?.['QUERY PLAN']);
     hnswObserved = JSON.stringify(planResult.rows[0]?.['QUERY PLAN'] || '').includes('index_documents_embedding_hnsw_idx');
     if (process.env.MEMORY_MODULE_ACCEPTANCE_REQUIRE_HNSW === 'true') assert.equal(hnswObserved, true, 'vector plan did not use the HNSW index');
   }
 
+  stage = 'reload';
   state = await repository.load(context);
   const persisted = state.assertions.find(item => item.id === primary.memory.memoryId);
   assert.ok(persisted);
@@ -200,6 +214,7 @@ try {
 } catch (error) {
   console.error(JSON.stringify({
     event: 'memory_module_postgres_acceptance_failed',
+    stage,
     code: error.code || 'MEMORY_POSTGRES_ACCEPTANCE_FAILED',
     message: error.message,
     detail: error.detail,

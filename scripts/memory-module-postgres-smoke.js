@@ -8,6 +8,7 @@ import pg from 'pg';
 import { resolveDbSsl } from '../server/db-ssl.js';
 import { createMemoryModule } from '../server/memory-module.js';
 import { createMemoryModulePostgresRepository } from '../server/memory-module-postgres.js';
+import { applyMemoryModuleSchema } from '../server/memory-module-pg-migration.js';
 
 if (!process.env.DATABASE_URL) {
   console.log(JSON.stringify({ event: 'memory_module_postgres_smoke_skipped', reason: 'DATABASE_URL_not_configured' }));
@@ -44,6 +45,7 @@ const cleanupQueries = [
   'DELETE FROM pins WHERE tenant_id=$1',
   'DELETE FROM deletion_operations WHERE tenant_id=$1',
   'DELETE FROM memory_tombstones WHERE tenant_id=$1',
+  'DELETE FROM memory_export_operations WHERE tenant_id=$1',
   'DELETE FROM redaction_epochs WHERE tenant_id=$1',
   'DELETE FROM memory_audit_events WHERE tenant_id=$1',
   'DELETE FROM memory_idempotency_records WHERE tenant_id=$1',
@@ -84,8 +86,8 @@ try {
   const applySchema = process.env.MEMORY_MODULE_SMOKE_APPLY_SCHEMA === 'true';
   if (applySchema) {
     const schema = await readFile(schemaPath, 'utf8');
-    await pool.query(schema);
-    await pool.query(schema);
+    await applyMemoryModuleSchema(pool, { schema });
+    await applyMemoryModuleSchema(pool, { schema });
   }
 
   const primarySeed = await seedSubject(context, `smoke-event-${randomUUID()}`, 'safe smoke event', 'safe smoke memory');
@@ -105,6 +107,13 @@ try {
   assert.equal(otherUserLoaded.assertions.some(item => item.id === otherUserSeed.created.memory.memoryId), true);
   assert.equal(otherTenantLoaded.assertions.some(item => item.id === otherTenantSeed.created.memory.memoryId), true);
   assert.equal(otherTenantLoaded.assertions.some(item => item.id === primarySeed.created.memory.memoryId), false);
+
+  const exportMemory = createMemoryModule(loaded, async () => {});
+  const exportOperation = await exportMemory.createExportOperation(context, { idempotency_key: `smoke-export-${randomUUID()}` });
+  await repository.save(context, exportMemory.state);
+  const reloadedExportMemory = createMemoryModule(await repository.load(context), async () => {});
+  assert.equal(reloadedExportMemory.getExportOperation(context, exportOperation.id)?.status, 'ready');
+  assert.equal(reloadedExportMemory.downloadExport(context, exportOperation.id).data.assertions.some(item => item.id === primarySeed.created.memory.memoryId), true);
 
   const claimed = await repository.claimOutboxEvent({ workerId: 'memory-postgres-smoke', consumerName, eventTypes: ['raw_event.created'] });
   assert.ok(claimed?.event?.id);
@@ -136,7 +145,7 @@ try {
   const secondMemory = createMemoryModule(second, async () => {});
   await secondMemory.hold(context, { content: 'stale concurrent write', sensitivity: 'S0' });
   await assert.rejects(() => repository.save(context, secondMemory.state), error => error.code === 'MEMORY_STORAGE_CONFLICT');
-  console.log(JSON.stringify({ event: 'memory_module_postgres_smoke_passed', tenantId, schemaIdempotent: applySchema, subjectIsolation: true, tenantIsolation: true, workerClaimed: true, workerFencing: true, concurrencyGuard: true }));
+  console.log(JSON.stringify({ event: 'memory_module_postgres_smoke_passed', tenantId, schemaIdempotent: applySchema, subjectIsolation: true, tenantIsolation: true, exportSnapshot: true, workerClaimed: true, workerFencing: true, concurrencyGuard: true }));
 } catch (error) {
   console.error(JSON.stringify({
     event: 'memory_module_postgres_smoke_failed',

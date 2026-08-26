@@ -8,7 +8,7 @@ test('evaluation metrics compute ranked retrieval and governance slices independ
     { id: 'known-2', version: 'v-test', expected: 'blue', expectedMode: 'known' },
     { id: 'none-1', version: 'v-test', expected: 'missing', expectedMode: 'no_answer' },
     { id: 'conflict-1', version: 'v-test', expected: 'tea', expectedMode: 'conflict' },
-    { id: 'scope-1', version: 'v-test', expected: 'forbidden', expectedMode: 'authorization' }
+    { id: 'scope-1', version: 'v-test', expected: 'forbidden', expectedMode: 'authorization', category: 'scope' }
   ];
   const results = {
     'known-1': { items: [{ content: 'unrelated' }, { content: 'red tea', sourceRefs: ['source-1'] }] },
@@ -20,9 +20,15 @@ test('evaluation metrics compute ranked retrieval and governance slices independ
   const metrics = evaluateMemoryRetrieval(cases, results, { k: 2 });
   assert.equal(metrics.totalCases, 5);
   assert.equal(metrics.recallAtK, 1);
+  assert.equal(metrics.recallAt10, 1);
   assert.equal(metrics.mrr, 0.75);
   assert.equal(metrics.noAnswerAccuracy, 1);
   assert.equal(metrics.conflictAccuracy, 1);
   assert.equal(metrics.authorizationAccuracy, 1);
+  assert.equal(metrics.scopeAccuracy, 1);
   assert.equal(metrics.evidenceSupportRate, 0.5);
+  assert.equal(metrics.sensitivityS2S3.available, false);
+  assert.equal(metrics.proactiveMention.available, false);
+  assert.equal(metrics.categoryMetrics['known-1'], undefined);
+  assert.equal(metrics.categoryMetrics.scope.scopeAccuracy, 1);
 });

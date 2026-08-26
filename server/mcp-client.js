@@ -21,7 +21,7 @@ export function createMcpClient({ url, token, timeoutMs = 5000, retryAttempts = 
   let initialized = false;
 
   async function request(method, params = {}) {
-    if (!url) throw new McpClientError('MCP_NOT_CONFIGURED', 'MEMORY_MCP_URL is required when MEMORY_MODE=mcp');
+    if (!url) throw new McpClientError('MCP_NOT_CONFIGURED', 'MCP URL is required');
     let lastError;
     for (let attempt = 0; attempt <= retryAttempts; attempt += 1) {
       const controller = new AbortController();
@@ -44,8 +44,8 @@ export function createMcpClient({ url, token, timeoutMs = 5000, retryAttempts = 
         return payload.result;
       } catch (error) {
         if (error instanceof McpClientError) lastError = error;
-        else if (error.name === 'AbortError') lastError = new McpClientError('MCP_TIMEOUT', 'Memory MCP request timed out', error);
-        else lastError = new McpClientError('MCP_NETWORK_FAILED', 'Memory MCP network request failed', error);
+        else if (error.name === 'AbortError') lastError = new McpClientError('MCP_TIMEOUT', 'MCP request timed out', error);
+        else lastError = new McpClientError('MCP_NETWORK_FAILED', 'MCP network request failed', error);
         if (attempt < retryAttempts) await sleep(100 * (attempt + 1));
       } finally { clearTimeout(timer); }
     }

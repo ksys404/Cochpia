@@ -3,6 +3,22 @@ import { bm25Search, detectConflicts, hybridSearch, vectorSearch } from './memor
 import { routeMemoryQuery } from './memory-module-query-router.js';
 import { PaginationCursorError, assertCursorBinding, decodeOpaqueCursor, pageNewestFirst } from './memory-module-pagination.js';
 import { numericSourceRevision } from './memory-module-event-order.js';
+import {
+  SENSITIVITY_LEVELS,
+  classifyMemorySensitivity,
+  classifySensitivity,
+  contentCarrierHasS3,
+  containsS3Content,
+  detectS3,
+  fingerprintForMutation,
+  isSecretMemoryContent
+} from './memory-input-policy.js';
+import {
+  createMemoryDeletionCoordinator,
+  removeAccountDataForSubject as removeAccountDataForSubjectImpl
+} from './memory-module-deletion.js';
+
+export { removeAccountDataForSubjectImpl as removeAccountDataForSubject };
 
 export const MEMORY_SCOPES = Object.freeze(['user', 'relationship', 'session']);
 export const MEMORY_STATUSES = Object.freeze([
@@ -15,9 +31,9 @@ export const MEMORY_STATUSES = Object.freeze([
   'revoked',
   'forgotten'
 ]);
-export const SENSITIVITY_LEVELS = Object.freeze(['S0', 'S1', 'S2', 'S3']);
+export const EXPORT_OPERATION_STATUSES = Object.freeze(['ready', 'stale', 'expired']);
+export { SENSITIVITY_LEVELS, classifyMemorySensitivity, isSecretMemoryContent };
 
-const sensitivityRank = { S0: 0, S1: 1, S2: 2, S3: 3 };
 const allowedRoles = new Set(['user', 'agent', 'system', 'tool', 'imported']);
 const allowedContentTypes = new Set(['plain_text', 'structured', 'tool_output', 'imported']);
 const allowedAssertionContentTypes = new Set([...allowedContentTypes, 'quoted_content']);
@@ -63,7 +79,9 @@ export function createMemoryModuleState() {
     scopeGrants: [],
     deletionOperations: [],
     tombstones: [],
+    exportOperations: [],
     redactionEpochs: {},
+    subjectSequences: {},
     auditEvents: [],
     idempotencyRecords: [],
     sequence: 0,
@@ -101,78 +119,18 @@ function asDate(value, field, { required = false } = {}) {
 
 const MUTATION_IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
 
-function detectS3(content) {
-  const text = String(content || '');
-  return /(?:sk|rk)-[A-Za-z0-9_-]{16,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|\b\d{13,19}\b|\b\d{3}-\d{2}-\d{4}\b/i.test(text);
-}
-
-function containsS3Content(value) {
-  if (typeof value === 'string') return detectS3(value);
-  if (Array.isArray(value)) return value.some(containsS3Content);
-  if (value && typeof value === 'object') return Object.values(value).some(containsS3Content);
-  return false;
-}
-
-function contentCarrierHasS3(input = {}) {
-  return containsS3Content([
-    input.content,
-    input.summary,
-    input.value,
-    input.structuredData,
-    input.structured_data,
-    input.proposedContent,
-    input.proposed_content
-  ]);
-}
-
-function canonicalizeFingerprint(value) {
-  if (Array.isArray(value)) return value.map(canonicalizeFingerprint);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value)
-      .filter(([key]) => !['idempotency_key', 'idempotencyKey', 'tenant_id', 'tenantId', 'user_id', 'userId'].includes(key))
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, item]) => [key, canonicalizeFingerprint(item)]));
-  }
-  return value;
-}
-
-function fingerprintForMutation(input, context, resourceId = null) {
-  return JSON.stringify(canonicalizeFingerprint({
-    actor: { actorType: context.actorType, actorId: context.actorId, callerAgentId: context.callerAgentId },
-    resourceId: resourceId || null,
-    request: input || {}
-  }));
-}
-
-function detectS2(content) {
-  return /健康|创伤|病史|诊断|医疗|药物|性取向|性生活|银行卡|财务|收入|债务|身份证|家庭冲突|trauma|diagnos|medical|medication|sexual|bank account|finance|income|debt|identity document/i.test(String(content || ''));
-}
-
 function sanitizeMetadata(metadata) {
   if (metadata == null) return {};
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new MemoryModuleError('INVALID_METADATA', 'metadata must be an object');
-  const allowed = new Set(['language', 'channel', 'source_label', 'client_revision', 'turn_id', 'sequence_no']);
+  const allowed = new Set([
+    'language', 'channel', 'source_label', 'client_revision', 'turn_id', 'sequence_no',
+    'event_type', 'source_type', 'source_id', 'session_id', 'relationship_id',
+    'privacy_directive', 'request_id', 'trace_id', 'correlation_id', 'causation_id',
+    'producer', 'schema_version', 'event_status', 'run_id', 'parent_event_id', 'received_at',
+    'chunk_seq', 'attempt', 'completion_reason', 'resume_cursor'
+  ]);
   if (Object.keys(metadata).some(key => !allowed.has(key))) throw new MemoryModuleError('INVALID_METADATA', 'metadata contains unsupported fields');
   return Object.fromEntries(Object.entries(metadata).map(([key, value]) => [key, normalizeText(value, 200)]));
-}
-
-function maxSensitivity(a, b) {
-  return sensitivityRank[a] >= sensitivityRank[b] ? a : b;
-}
-
-function classifySensitivity(input) {
-  const requested = SENSITIVITY_LEVELS.includes(input.sensitivity) ? input.sensitivity : 'S0';
-  if (detectS3(input.content)) return 'S3';
-  if (detectS2(input.content)) return maxSensitivity(requested, 'S2');
-  return requested;
-}
-
-export function classifyMemorySensitivity(input) {
-  return classifySensitivity(input);
-}
-
-export function isSecretMemoryContent(content) {
-  return detectS3(content);
 }
 
 function contextOf(context = {}) {
@@ -208,6 +166,61 @@ function scopeKey(scope) {
 
 function userKey(context) {
   return `${context.tenantId}:${context.subjectUserId}`;
+}
+
+const EXPORT_OPERATION_TTL_MS = 60 * 60 * 1000;
+
+function exportSubjectData(state, context) {
+  const belongs = item => item?.tenantId === context.tenantId && (item.userId === context.subjectUserId || item.subjectUserId === context.subjectUserId);
+  const rawEvents = (state.rawEvents || []).filter(belongs);
+  const sessions = (state.sessions || []).filter(belongs);
+  const assertions = (state.assertions || []).filter(belongs);
+  const assertionIds = new Set(assertions.map(item => item.id));
+  const versions = (state.assertionVersions || []).filter(item => assertionIds.has(item.assertionId));
+  const versionIds = new Set(versions.map(item => item.id));
+  const snapshots = (state.profileSnapshots || []).filter(belongs);
+  const snapshotIds = new Set(snapshots.map(item => item.id));
+  const projections = (state.profileProjections || []).filter(belongs);
+  const projectionIds = new Set(projections.map(item => item.id));
+  const currentStates = (state.currentStates || []).filter(belongs);
+  const currentStateIds = new Set(currentStates.map(item => item.id));
+  const episodes = (state.episodes || []).filter(belongs);
+  const episodeIds = new Set(episodes.map(item => item.id));
+  const rawEventIds = new Set(rawEvents.map(item => item.id));
+  const relatedAggregateIds = new Set([...rawEventIds, ...assertionIds, ...versionIds, ...currentStateIds, ...new Set(sessions.map(item => item.id))]);
+  const scoped = (items, predicate = belongs) => (items || []).filter(predicate).map(clone);
+  return {
+    rawEvents: scoped(rawEvents),
+    sessions: scoped(sessions),
+    profileSnapshots: scoped(snapshots),
+    profileSnapshotItems: scoped(state.profileSnapshotItems, item => belongs(item) || snapshotIds.has(item.snapshotId) || assertionIds.has(item.assertionId) || versionIds.has(item.versionId)),
+    profileProjections: scoped(projections),
+    profileProjectionItems: scoped(state.profileProjectionItems, item => belongs(item) || projectionIds.has(item.projectionId) || assertionIds.has(item.assertionId) || versionIds.has(item.versionId)),
+    profileProjectionSources: scoped(state.profileProjectionSources, item => belongs(item) || projectionIds.has(item.projectionId) || assertionIds.has(item.assertionId) || versionIds.has(item.versionId)),
+    indexDocuments: scoped(state.indexDocuments, item => belongs(item) || assertionIds.has(item.sourceId) || versionIds.has(item.sourceVersion)),
+    episodes: scoped(episodes),
+    episodeMembers: scoped(state.episodeMembers, item => belongs(item) || episodeIds.has(item.episodeId) || rawEventIds.has(item.rawEventId) || versionIds.has(item.assertionVersionId)),
+    assertions: scoped(assertions),
+    assertionVersions: versions.map(clone),
+    assertionVersionSources: scoped(state.assertionVersionSources, item => belongs(item) || versionIds.has(item.versionId) || (item.sourceType === 'raw_event' && rawEventIds.has(item.sourceId))),
+    currentStates: scoped(currentStates),
+    currentStateSources: scoped(state.currentStateSources, item => belongs(item) || currentStateIds.has(item.currentStateId) || rawEventIds.has(item.rawEventId)),
+    confirmations: scoped(state.confirmations, item => belongs(item) || assertionIds.has(item.candidateAssertionId) || versionIds.has(item.candidateVersionId)),
+    accessConfirmations: scoped(state.accessConfirmations, item => belongs(item) || item.memoryIds?.some(id => assertionIds.has(id))),
+    mentionCooldowns: scoped(state.mentionCooldowns, item => belongs(item) || assertionIds.has(item.memoryId)),
+    pins: scoped(state.pins, item => belongs(item) || assertionIds.has(item.assertionId) || versionIds.has(item.pinnedVersionId)),
+    scopeGrants: scoped(state.scopeGrants),
+    deletionOperations: scoped(state.deletionOperations),
+    tombstones: scoped(state.tombstones),
+    outboxEvents: scoped(state.outboxEvents, item => belongs(item) || relatedAggregateIds.has(item.aggregateId)),
+    auditEvents: scoped(state.auditEvents),
+    idempotencyRecords: scoped(state.idempotencyRecords),
+    exportOperations: scoped(state.exportOperations),
+    redactionEpoch: Number(state.redactionEpochs?.[userKey(context)] || 0),
+    sequence: Number(state.sequence || 0),
+    grantVersion: Number(state.grantVersion || 0),
+    policyVersion: state.policyVersion || 'memory-policy-v1'
+  };
 }
 
 function requestPayloadTenantMatches(context, input) {
@@ -383,48 +396,6 @@ function findSession(state, id, context) {
   return state.sessions.find(session => session.id === id && session.tenantId === context.tenantId && session.userId === context.subjectUserId) || null;
 }
 
-export function removeAccountDataForSubject(state, { tenantId, userId }, { preserveDeletionLedger = false } = {}) {
-  if (!state || !tenantId || !userId) throw new TypeError('state, tenantId, and userId are required');
-  const belongs = item => item?.tenantId === tenantId && (item.userId === userId || item.subjectUserId === userId);
-  const rawEventIds = new Set((state.rawEvents || []).filter(belongs).map(item => item.id));
-  const sessionIds = new Set((state.sessions || []).filter(belongs).map(item => item.id));
-  const assertionIds = new Set((state.assertions || []).filter(belongs).map(item => item.id));
-  const versionIds = new Set((state.assertionVersions || []).filter(item => assertionIds.has(item.assertionId)).map(item => item.id));
-  const snapshotIds = new Set((state.profileSnapshots || []).filter(belongs).map(item => item.id));
-  const projectionIds = new Set((state.profileProjections || []).filter(belongs).map(item => item.id));
-  const currentStateIds = new Set((state.currentStates || []).filter(belongs).map(item => item.id));
-  const episodeIds = new Set((state.episodes || []).filter(belongs).map(item => item.id));
-  const memoryIds = assertionIds;
-
-  state.rawEvents = (state.rawEvents || []).filter(item => !rawEventIds.has(item.id) && !belongs(item));
-  state.sessions = (state.sessions || []).filter(item => !sessionIds.has(item.id) && !belongs(item));
-  state.profileSnapshots = (state.profileSnapshots || []).filter(item => !snapshotIds.has(item.id) && !belongs(item));
-  state.profileSnapshotItems = (state.profileSnapshotItems || []).filter(item => !belongs(item) && !snapshotIds.has(item.snapshotId) && !memoryIds.has(item.assertionId) && !versionIds.has(item.versionId));
-  state.profileProjections = (state.profileProjections || []).filter(item => !projectionIds.has(item.id) && !belongs(item));
-  state.profileProjectionItems = (state.profileProjectionItems || []).filter(item => !belongs(item) && !projectionIds.has(item.projectionId) && !memoryIds.has(item.assertionId) && !versionIds.has(item.versionId));
-  state.profileProjectionSources = (state.profileProjectionSources || []).filter(item => !belongs(item) && !projectionIds.has(item.projectionId) && !memoryIds.has(item.assertionId) && !versionIds.has(item.versionId));
-  state.assertions = (state.assertions || []).filter(item => !assertionIds.has(item.id) && !belongs(item));
-  state.assertionVersions = (state.assertionVersions || []).filter(item => !versionIds.has(item.id));
-  state.assertionVersionSources = (state.assertionVersionSources || []).filter(item => !versionIds.has(item.versionId) && !(item.sourceType === 'raw_event' && rawEventIds.has(item.sourceId)));
-  state.currentStates = (state.currentStates || []).filter(item => !currentStateIds.has(item.id) && !belongs(item));
-  state.currentStateSources = (state.currentStateSources || []).filter(item => !belongs(item) && !currentStateIds.has(item.currentStateId) && !rawEventIds.has(item.rawEventId));
-  state.confirmations = (state.confirmations || []).filter(item => !belongs(item) && !memoryIds.has(item.candidateAssertionId) && !versionIds.has(item.candidateVersionId));
-  state.accessConfirmations = (state.accessConfirmations || []).filter(item => !belongs(item) && !item.memoryIds?.some(id => memoryIds.has(id)));
-  state.mentionCooldowns = (state.mentionCooldowns || []).filter(item => !belongs(item) && !memoryIds.has(item.memoryId));
-  state.pins = (state.pins || []).filter(item => !belongs(item) && !memoryIds.has(item.assertionId) && !versionIds.has(item.pinnedVersionId));
-  state.indexDocuments = (state.indexDocuments || []).filter(item => !belongs(item) && !memoryIds.has(item.sourceId) && !versionIds.has(item.sourceVersion));
-  state.episodes = (state.episodes || []).filter(item => !episodeIds.has(item.id) && !belongs(item));
-  state.episodeMembers = (state.episodeMembers || []).filter(item => !belongs(item) && !episodeIds.has(item.episodeId) && !rawEventIds.has(item.rawEventId) && !versionIds.has(item.assertionVersionId));
-  state.scopeGrants = (state.scopeGrants || []).filter(item => !belongs(item));
-  state.outboxEvents = (state.outboxEvents || []).filter(item => !belongs(item) && !rawEventIds.has(item.aggregateId) && !memoryIds.has(item.aggregateId) && !versionIds.has(item.aggregateId) && !currentStateIds.has(item.aggregateId) && !sessionIds.has(item.aggregateId));
-  state.idempotencyRecords = (state.idempotencyRecords || []).filter(item => !belongs(item));
-  state.auditEvents = (state.auditEvents || []).filter(item => !belongs(item));
-  if (!preserveDeletionLedger) {
-    state.deletionOperations = (state.deletionOperations || []).filter(item => !belongs(item));
-    state.tombstones = (state.tombstones || []).filter(item => !belongs(item));
-  }
-}
-
 function assertSessionAccess(state, context, sessionId) {
   const session = findSession(state, sessionId, context);
   if (!session) throw new MemoryModuleError('SESSION_NOT_FOUND', 'Session not found', { status: 404 });
@@ -524,7 +495,9 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
   state.scopeGrants ||= [];
   state.deletionOperations ||= [];
   state.tombstones ||= [];
+  state.exportOperations ||= [];
   state.redactionEpochs ||= {};
+  state.subjectSequences ||= {};
   state.auditEvents ||= [];
   state.idempotencyRecords ||= [];
   state.sequence ||= 0;
@@ -566,11 +539,78 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     }
   };
 
-  const bumpSequence = () => { state.sequence += 1; return state.sequence; };
+  const currentSubjectSequence = context => {
+    const key = userKey(context);
+    if (!Object.hasOwn(state.subjectSequences, key)) state.subjectSequences[key] = Number(state.sequence || 0);
+    return Number(state.subjectSequences[key] || 0);
+  };
+  const bumpSequence = (context = null) => {
+    state.sequence += 1;
+    if (context) {
+      const key = userKey(context);
+      const current = Object.hasOwn(state.subjectSequences, key)
+        ? Number(state.subjectSequences[key] || 0)
+        : Number(state.sequence - 1);
+      state.subjectSequences[key] = current + 1;
+    }
+    return state.sequence;
+  };
   const bumpEpoch = context => {
     const key = userKey(context);
     state.redactionEpochs[key] = Number(state.redactionEpochs[key] || 0) + 1;
     return state.redactionEpochs[key];
+  };
+
+  const exportOperationStatus = (operation, context) => {
+    if (operation.expiresAt && new Date(operation.expiresAt).getTime() <= Date.now()) return 'expired';
+    if (Number(operation.operationCommitSeq) !== currentSubjectSequence(context)) return 'stale';
+    return operation.status || 'ready';
+  };
+
+  const createExportOperation = async (rawContext, input = {}) => {
+    const context = contextOf(rawContext);
+    assertUserGovernanceActor(context);
+    requestPayloadTenantMatches(context, input);
+    const now = Date.now();
+    const sourceCommitSeq = currentSubjectSequence(context);
+    const operation = {
+      id: randomUUID(),
+      tenantId: context.tenantId,
+      subjectUserId: context.subjectUserId,
+      status: 'ready',
+      sourceCommitSeq,
+      operationCommitSeq: sourceCommitSeq + 1,
+      requestedAt: new Date(now).toISOString(),
+      completedAt: new Date(now).toISOString(),
+      expiresAt: new Date(now + EXPORT_OPERATION_TTL_MS).toISOString(),
+      resourceRevision: 1
+    };
+    state.exportOperations.push(operation);
+    bumpSequence(context);
+    await persist();
+    return { ...clone(operation), consistencyToken: tokenFor(state, context) };
+  };
+
+  const getExportOperation = (rawContext, id) => {
+    const context = contextOf(rawContext);
+    const operation = state.exportOperations.find(item => item.id === normalizeId(id, 'export_operation_id') && item.tenantId === context.tenantId && item.subjectUserId === context.subjectUserId);
+    if (!operation) return null;
+    return { ...clone(operation), status: exportOperationStatus(operation, context) };
+  };
+
+  const downloadExport = (rawContext, id) => {
+    const context = contextOf(rawContext);
+    const operation = state.exportOperations.find(item => item.id === normalizeId(id, 'export_operation_id') && item.tenantId === context.tenantId && item.subjectUserId === context.subjectUserId);
+    if (!operation) throw new MemoryModuleError('EXPORT_OPERATION_NOT_FOUND', 'Export operation not found', { status: 404 });
+    const status = exportOperationStatus(operation, context);
+    if (status === 'expired') throw new MemoryModuleError('EXPORT_OPERATION_EXPIRED', 'Export operation has expired', { status: 410 });
+    if (status === 'stale') throw new MemoryModuleError('EXPORT_SNAPSHOT_STALE', 'Canonical data changed after the export operation was created', { status: 409 });
+    return {
+      version: 1,
+      exportedAt: nowIso(),
+      operation: clone(operation),
+      data: exportSubjectData(state, context)
+    };
   };
 
   const mutationNamespaceOf = record => record.mutationNamespace || record.namespace || 'event';
@@ -614,6 +654,20 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       || record.resourceType !== resourceType
       || !ids.has(record.resourceId));
   };
+
+  const {
+    cleanDerivedForDeletion,
+    physicallyRemoveAssertions,
+    physicallyRemoveSourceEvents,
+    newDeletionOperation
+  } = createMemoryDeletionCoordinator({
+    state,
+    nowIso,
+    bumpEpoch,
+    audit: (context, action, details) => audit(state, context, action, details),
+    invalidateMutationRecords,
+    mutationNamespaceOf
+  });
 
   const inferMutationResource = (namespace, result, resourceType, resourceId) => {
     if (resourceType && resourceId) return { resourceType, resourceId };
@@ -697,7 +751,14 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
         expiresAt: new Date(now + MUTATION_IDEMPOTENCY_RETENTION_MS).toISOString(),
         createdAt: nowIso()
       };
-      bumpSequence();
+      bumpSequence(context);
+      if (namespace === 'export.create' && result?.id) {
+        const operation = state.exportOperations.find(item => item.id === result.id);
+        if (operation) {
+          operation.operationCommitSeq = currentSubjectSequence(context);
+          result.operationCommitSeq = currentSubjectSequence(context);
+        }
+      }
       if (result && typeof result === 'object' && result.consistencyToken) result.consistencyToken = tokenFor(state, context);
       record.response = clone(result);
       state.idempotencyRecords.push(record);
@@ -716,9 +777,13 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const context = contextOf(rawContext);
     requestPayloadTenantMatches(context, input);
     const callerAgentId = normalizeId(input.callerAgentId ?? input.caller_agent_id ?? context.callerAgentId ?? 'cochpia', 'caller_agent_id');
+    const requestedId = input.id ?? input.sessionId ?? input.session_id;
+    const sessionId = normalizeId(requestedId ?? randomUUID(), 'session_id');
+    const existing = state.sessions.find(item => item.id === sessionId && item.tenantId === context.tenantId && item.userId === context.subjectUserId);
+    if (existing) return { ...clone(existing), consistencyToken: tokenFor(state, context) };
     const expiresAt = asDate(input.expiresAt ?? input.expires_at, 'expires_at') || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
     const session = {
-      id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, callerAgentId,
+      id: sessionId, tenantId: context.tenantId, userId: context.subjectUserId, callerAgentId,
       status: 'active', startedAt: nowIso(), closedAt: null, expiresAt,
       profileSnapshotId: randomUUID(), grantVersion: state.grantVersion, privacyEpoch: state.redactionEpochs[userKey(context)] || 0,
       resourceRevision: 1
@@ -732,7 +797,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       && (item.scopeType === 'user' || (item.scopeType === 'relationship' && item.relationshipAgentId === callerAgentId)))) {
       state.profileSnapshotItems.push({ snapshotId: session.profileSnapshotId, tenantId: context.tenantId, userId: context.subjectUserId, assertionId: assertion.id, versionId: assertion.currentVersionId, scopeType: assertion.scopeType, createdAt: nowIso() });
     }
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { ...clone(session), consistencyToken: tokenFor(state, context) };
   };
@@ -758,7 +823,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const duplicateRecord = state.idempotencyRecords.find(record => record.tenantId === context.tenantId && record.userId === context.subjectUserId && mutationNamespaceOf(record) === 'event' && record.key === `${eventId}:${sourceRevision}`);
     if (duplicate) {
       if (duplicate.content !== content || duplicate.contentType !== contentType || duplicate.eventRole !== eventRole) throw new MemoryModuleError('IDEMPOTENCY_CONFLICT', 'The same event key was already used with a different payload', { status: 409 });
-      return { result: 'duplicate', eventId, sourceRevision, consistencyToken: tokenFor(state, context) };
+      return { result: 'duplicate', eventId, sourceRevision, rawEventId: duplicate.id, commitSeq: duplicate.commitSeq ?? null, consistencyToken: tokenFor(state, context) };
     }
     if (duplicateRecord) {
       if (duplicateRecord.result === 'accepted_no_store') return { result: 'duplicate', eventId, sourceRevision, consistencyToken: tokenFor(state, context) };
@@ -780,7 +845,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     audit(state, context, blocked ? 'event_accepted_no_store' : 'event_received', { eventId, sourceRevision, noStoreReason });
     if (blocked) {
       state.idempotencyRecords.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, mutationNamespace: 'event', key: `${eventId}:${sourceRevision}`, result: 'accepted_no_store', contentLength: content.length, contentType, createdAt: nowIso() });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       return { result: 'accepted_no_store', eventId, sourceRevision, consistencyToken: tokenFor(state, context) };
     }
@@ -795,7 +860,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       retentionPolicy: input.retentionPolicy ?? input.retention_policy ?? 'default_event',
       deleteAfter: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000).toISOString(),
       resourceRevision: 1,
-      createdAt: nowIso(), commitSeq: bumpSequence()
+      createdAt: nowIso(), commitSeq: bumpSequence(context)
     };
     state.rawEvents.push(rawEvent);
     if (isStreamFinal) state.outboxEvents.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, consumerName: 'memory-derived', type: 'raw_event.created', aggregateId: rawEvent.id, schemaVersion: 1, commitSeq: rawEvent.commitSeq, status: 'pending', createdAt: nowIso() });
@@ -814,7 +879,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const grant = { grantId: randomUUID(), tenantId: context.tenantId, subjectUserId: context.subjectUserId, granteeType: 'agent', granteeId: agentId, scopeType: 'user', permissions, purpose: input.purpose || 'memory_access', issuer: context.actorId, issuedAt: nowIso(), expiresAt: asDate(input.expiresAt ?? input.expires_at, 'expires_at'), revokedAt: null, grantVersion: ++state.grantVersion, resourceRevision: 1 };
     state.scopeGrants.push(grant);
     audit(state, context, 'grant_created', { grantId: grant.grantId });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { ...clone(grant), consistencyToken: tokenFor(state, context) };
   };
@@ -826,13 +891,13 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertEnum(storageDirective, allowedStorageDirectives, 'INVALID_STORAGE_DIRECTIVE', 'storage_directive');
     if (storageDirective === 'do_not_store') {
       audit(state, context, 'memory_accepted_no_store', { noStoreReason: 'caller_directive' });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       return { status: 'accepted_no_store', consistencyToken: tokenFor(state, context) };
     }
     if (contentCarrierHasS3(input)) {
       audit(state, context, 'memory_rejected_s3');
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       throw new MemoryModuleError('S3_CONTENT_REJECTED', 'Sensitive content cannot be stored', { status: 422 });
     }
@@ -841,7 +906,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const sensitivity = classifySensitivity({ ...input, content });
     if (sensitivity === 'S3') {
       audit(state, context, 'memory_rejected_s3');
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       throw new MemoryModuleError('S3_CONTENT_REJECTED', 'Sensitive content cannot be stored', { status: 422 });
     }
@@ -862,11 +927,11 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       const confirmation = { id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, candidateAssertionId: assertion.id, candidateVersionId: version.id, proposedContent: content, structuredData: version.structuredData, scopeType: assertion.scopeType, relationshipAgentId: assertion.relationshipAgentId, sessionId: assertion.sessionId, sensitivity, retentionPolicy: assertion.retentionPolicy, mentionPolicy: assertion.mentionPolicy, resourceRevision: assertion.resourceRevision, createdAt: nowIso(), expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending', decidedBy: null, decidedAt: null };
       state.confirmations.push(confirmation);
       audit(state, context, 'memory_pending_confirmation', { memoryId: assertion.id, confirmationId: confirmation.id });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       return { status: 'pending_confirmation', memory: serializeAssertion(state, assertion, { includeGovernance: true }), confirmation: clone(confirmation), consistencyToken: tokenFor(state, context) };
     }
-    bumpSequence();
+    bumpSequence(context);
     state.outboxEvents.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, consumerName: 'memory-derived', type: 'assertion.active', aggregateId: assertion.id, schemaVersion: 1, commitSeq: state.sequence, status: 'pending', createdAt: nowIso() });
     audit(state, context, 'memory_activated', { memoryId: assertion.id });
     await persist();
@@ -899,7 +964,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       confirmation = { id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, candidateAssertionId: assertion.id, candidateVersionId: version.id, proposedContent: content, structuredData: version.structuredData, scopeType: assertion.scopeType, relationshipAgentId: assertion.relationshipAgentId, sessionId: assertion.sessionId, sensitivity, retentionPolicy: assertion.retentionPolicy, mentionPolicy: assertion.mentionPolicy, resourceRevision: assertion.resourceRevision, createdAt: nowIso(), expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending', decidedBy: null, decidedAt: null };
       state.confirmations.push(confirmation);
     }
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, status === 'candidate' ? 'candidate_created' : 'candidate_pending_confirmation', { memoryId: assertion.id, sourceEventId: sourceEvent.id });
     await persist();
     return { status, memory: serializeAssertion(state, assertion, { includeGovernance: true }), confirmation: confirmation ? clone(confirmation) : null, consistencyToken: tokenFor(state, context) };
@@ -914,7 +979,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertion.status = 'active';
     assertion.resourceRevision += 1;
     assertion.updatedAt = nowIso();
-    bumpSequence();
+    bumpSequence(context);
     state.outboxEvents.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, consumerName: 'memory-derived', type: 'assertion.active', aggregateId: assertion.id, schemaVersion: 1, commitSeq: state.sequence, status: 'pending', createdAt: nowIso() });
     audit(state, context, 'candidate_promoted', { memoryId: assertion.id, policyVersion: state.policyVersion });
     await persist();
@@ -1207,7 +1272,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     access.token = randomUUID();
     access.confirmedAt = nowIso();
     audit(state, context, 'access_confirmation_granted', { accessConfirmationId: access.id });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { accessToken: access.token, expiresAt: access.expiresAt, purpose: access.purpose, consistencyToken: tokenFor(state, context) };
   };
@@ -1227,6 +1292,30 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const directlyAuthorizedMemoryIds = new Set((retrieved.items || []).map(item => item.memoryId).filter(Boolean));
     const bundlePolicyAllows = item => directlyAuthorizedMemoryIds.has(item.memoryId)
       || (item.mentionPolicy !== 'do_not_mention' && item.directQueryPolicy === 'allow');
+    const relevantMemories = (retrieved.items || []).map(item => {
+      const assertion = item?.memoryId ? findAssertion(state, item.memoryId, context) : null;
+      if (assertion) {
+        if (!canSee(state, context, assertion, purpose, { allowGovernance: purpose === 'governance' })) return null;
+        return {
+          ...serializeAssertion(state, assertion, {
+            includeGovernance: purpose === 'governance',
+            versionIdOverride: item.versionId,
+            sourceRefsOverride: item.sourceRefs
+          }),
+          score: item.score || 0
+        };
+      }
+      const currentState = item?.memoryId
+        ? state.currentStates.find(candidate => candidate.id === item.memoryId)
+        : null;
+      const activeCurrentSession = activeSessionForContext(context);
+      if (!currentState
+        || !activeCurrentSession
+        || currentState.sessionId !== activeCurrentSession.id
+        || currentState.status !== 'active'
+        || (currentState.expiresAt && new Date(currentState.expiresAt).getTime() <= Date.now())) return null;
+      return { ...serializeCurrentState(state, currentState), score: item.score || 0 };
+    }).filter(Boolean);
     const all = (activeSession
       ? snapshot
       ? state.profileSnapshotItems
@@ -1256,13 +1345,8 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       const text = String(value ?? '');
       return text.length > maxChars ? `${text.slice(0, Math.max(0, maxChars - 1))}…` : text;
     };
-    const bundle = { answerability: retrieved.answerability, consistency: retrieved.consistency, serviceMode: retrieved.serviceMode, queryRoute: retrieved.queryRoute || 'unknown', policyResult: retrieved.policyResult, coreMemory: core, userProfile: profile, relationshipProfile: relationships, currentState, relevantEpisodes: episodes, evidence: [...retrieved.items.map(item => ({ memoryId: item.memoryId, versionId: item.versionId, sourceRefs: item.sourceRefs })), ...episodes.map(episode => ({ episodeId: episode.episodeId, sourceRefs: episode.sourceRefs }))], uncertainties: retrieved.uncertainties || [], blocks: retrieved.blocks, snapshotId: randomUUID(), profileSnapshotId: snapshot?.id || (activeSession ? null : randomUUID()), privacyEpoch: state.redactionEpochs[userKey(context)] || 0, grantVersion: state.grantVersion, consistencyToken: retrieved.consistencyToken, sourceVersions: retrieved.items.map(item => item.versionId).filter(Boolean), indexWatermarks: { canonical: state.sequence }, tokenBudget, tokenCount: 0, truncated: false, tokenizerId: 'approx-json-v1' };
-    // Evidence is provenance metadata; trim it before content-bearing memory fields.
-    while (bundle.evidence.length > 1 && estimate(bundle) > tokenBudget) {
-      bundle.evidence.pop();
-      bundle.truncated = true;
-    }
-    for (const key of ['userProfile', 'relationshipProfile', 'relevantEpisodes']) {
+    const bundle = { answerability: retrieved.answerability, consistency: retrieved.consistency, serviceMode: retrieved.serviceMode, queryRoute: retrieved.queryRoute || 'unknown', policyResult: retrieved.policyResult, coreMemory: core, userProfile: profile, relationshipProfile: relationships, currentState, relevantMemories, relevantEpisodes: episodes, evidence: [...retrieved.items.map(item => ({ memoryId: item.memoryId, versionId: item.versionId, sourceRefs: item.sourceRefs })), ...episodes.map(episode => ({ episodeId: episode.episodeId, sourceRefs: episode.sourceRefs }))], uncertainties: retrieved.uncertainties || [], blocks: retrieved.blocks, snapshotId: randomUUID(), profileSnapshotId: snapshot?.id || (activeSession ? null : randomUUID()), privacyEpoch: state.redactionEpochs[userKey(context)] || 0, grantVersion: state.grantVersion, consistencyToken: retrieved.consistencyToken, sourceVersions: retrieved.items.map(item => item.versionId).filter(Boolean), indexWatermarks: { canonical: state.sequence }, tokenBudget, tokenCount: 0, truncated: false, tokenizerId: 'approx-json-v1' };
+    for (const key of ['userProfile', 'relationshipProfile', 'relevantEpisodes', 'relevantMemories']) {
       while (bundle[key].length && estimate(bundle) > tokenBudget) {
         bundle[key].pop();
         bundle.truncated = true;
@@ -1271,6 +1355,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     for (let maxChars = 512; estimate(bundle) > tokenBudget && maxChars >= 16; maxChars = Math.floor(maxChars / 2)) {
       bundle.coreMemory = bundle.coreMemory.map(item => ({ ...item, content: clip(item.content, maxChars), structuredData: maxChars < 64 ? {} : item.structuredData }));
       bundle.currentState = bundle.currentState.map(item => ({ ...item, value: clip(item.value, maxChars) }));
+      bundle.relevantMemories = bundle.relevantMemories.map(item => ({ ...item, content: clip(item.content, maxChars), structuredData: maxChars < 64 ? {} : item.structuredData }));
       bundle.relevantEpisodes = bundle.relevantEpisodes.map(item => ({ ...item, title: clip(item.title, maxChars), summary: clip(item.summary, maxChars) }));
       bundle.uncertainties = bundle.uncertainties.map(item => ({ ...item, values: Array.isArray(item.values) ? item.values.map(value => clip(value, maxChars)) : item.values }));
       bundle.truncated = true;
@@ -1322,7 +1407,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       recordedMemoryIds.push(assertion.id);
     }
     if (!recordedMemoryIds.length) return { status: 'filtered', recordedMemoryIds: [], consistencyToken: tokenFor(state, context) };
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'proactive_mention_recorded', { memoryCount: recordedMemoryIds.length, topicKey, cooldownMs });
     await persist();
     return { status: 'recorded', recordedMemoryIds, topicKey: topicKey || null, cooldownUntil, consistencyToken: tokenFor(state, context) };
@@ -1338,13 +1423,13 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertEnum(storageDirective, allowedStorageDirectives, 'INVALID_STORAGE_DIRECTIVE', 'storage_directive');
     if (storageDirective === 'do_not_store') {
       audit(state, context, 'memory_correction_accepted_no_store', { memoryId: assertion.id, noStoreReason: 'caller_directive' });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       return { status: 'accepted_no_store', memoryId: assertion.id, consistencyToken: tokenFor(state, context) };
     }
     if (contentCarrierHasS3(input)) {
       audit(state, context, 'memory_correction_rejected_s3', { memoryId: assertion.id });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       throw new MemoryModuleError('S3_CONTENT_REJECTED', 'Sensitive content cannot be stored', { status: 422 });
     }
@@ -1361,7 +1446,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       assertion.updatedAt = nowIso();
       const confirmation = { id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, candidateAssertionId: assertion.id, candidateVersionId: version.id, proposedContent: content, structuredData: version.structuredData, scopeType: assertion.scopeType, relationshipAgentId: assertion.relationshipAgentId, sessionId: assertion.sessionId, sensitivity, retentionPolicy: assertion.retentionPolicy, mentionPolicy: policies.mentionPolicy, resourceRevision: assertion.resourceRevision, createdAt: nowIso(), expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending', decidedBy: null, decidedAt: null };
       state.confirmations.push(confirmation);
-      bumpSequence();
+      bumpSequence(context);
       audit(state, context, 'memory_correction_pending_confirmation', { memoryId: assertion.id, supersedesVersionId: oldVersion?.id || null, versionId: version.id, confirmationId: confirmation.id });
       await persist();
       return { status: 'pending_confirmation', memory: serializeAssertion(state, assertion, { includeGovernance: true }), confirmation: clone(confirmation), consistencyToken: tokenFor(state, context) };
@@ -1373,7 +1458,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertion.resourceRevision += 1;
     assertion.updatedAt = nowIso();
     state.indexDocuments = (state.indexDocuments || []).filter(document => document.sourceId !== assertion.id);
-    bumpSequence();
+    bumpSequence(context);
     state.outboxEvents.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, consumerName: 'memory-derived', type: 'assertion.active', aggregateId: assertion.id, schemaVersion: 1, commitSeq: state.sequence, status: 'pending', createdAt: nowIso() });
     audit(state, context, 'memory_corrected', { memoryId: assertion.id, supersedesVersionId: oldVersion.id, versionId: version.id });
     await persist();
@@ -1394,7 +1479,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertion.resourceRevision += 1;
     assertion.updatedAt = nowIso();
     audit(state, context, 'memory_pinned', { memoryId: assertion.id, pinnedVersionId });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { memory: serializeAssertion(state, assertion, { includeGovernance: true }), consistencyToken: tokenFor(state, context) };
   };
@@ -1411,7 +1496,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertion.updatedAt = nowIso();
     state.indexDocuments = (state.indexDocuments || []).filter(document => document.sourceId !== assertion.id);
     audit(state, context, 'memory_unpinned', { memoryId: assertion.id });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { memory: serializeAssertion(state, assertion, { includeGovernance: true }), consistencyToken: tokenFor(state, context) };
   };
@@ -1428,7 +1513,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     bumpEpoch(context);
     state.indexDocuments = (state.indexDocuments || []).filter(document => document.sourceId !== assertion.id);
     audit(state, context, 'memory_revoked', { memoryId: assertion.id });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { memoryId: assertion.id, status: 'revoked', consistencyToken: tokenFor(state, context) };
   };
@@ -1449,7 +1534,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     invalidateMutationRecords({ resourceType: 'memory', resourceIds: [assertion.id] });
     state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType: 'memory', targetId: assertion.id, action: 'forget', redactionEpoch: epoch, createdAt: nowIso() });
     audit(state, context, 'memory_forgotten', { memoryId: assertion.id, redactionEpoch: epoch });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { memoryId: assertion.id, status: 'forgotten', redactionEpoch: epoch, consistencyToken: tokenFor(state, context) };
   };
@@ -1479,7 +1564,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const operation = { id: randomUUID(), tenantId: context.tenantId, subjectUserId: context.subjectUserId, targetType: 'source_event', targetId: sourceEventId, requestedScope: { sourceEventId }, action: 'forget', status: 'completed', requestedBy: context.actorId, requestedAt: nowIso(), canonicalHiddenAt: nowIso(), completedAt: nowIso(), redactionEpoch: epoch, resourceRevision: 1, lastErrorCode: null };
     state.deletionOperations.push(operation);
     state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType: 'source_event', targetId: sourceEventId, action: 'forget', redactionEpoch: epoch, createdAt: nowIso() });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'source_event_forgotten', { sourceEventId, deletionOperationId: operation.id });
     await persist();
     return { sourceEventId, deletionOperationId: operation.id, status: 'forgotten', redactionEpoch: epoch, consistencyToken: tokenFor(state, context) };
@@ -1512,7 +1597,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const operation = { id: randomUUID(), tenantId: context.tenantId, subjectUserId: context.subjectUserId, targetType: 'session', targetId: session.id, requestedScope: { sessionId: session.id }, action: 'forget', status: 'completed', requestedBy: context.actorId, requestedAt: nowIso(), canonicalHiddenAt: nowIso(), completedAt: nowIso(), redactionEpoch: epoch, resourceRevision: 1, lastErrorCode: null };
     state.deletionOperations.push(operation);
     state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType: 'session', targetId: session.id, action: 'forget', redactionEpoch: epoch, createdAt: nowIso() });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'session_forgotten', { sessionId: session.id, deletionOperationId: operation.id });
     await persist();
     return { sessionId: session.id, deletionOperationId: operation.id, status: 'forgotten', redactionEpoch: epoch, consistencyToken: tokenFor(state, context) };
@@ -1539,7 +1624,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const operation = { id: randomUUID(), tenantId: context.tenantId, subjectUserId: context.subjectUserId, targetType: 'relationship', targetId: relationshipAgentId, requestedScope: { relationshipAgentId }, action: 'forget', status: 'completed', requestedBy: context.actorId, requestedAt: nowIso(), canonicalHiddenAt: nowIso(), completedAt: nowIso(), redactionEpoch: epoch, resourceRevision: 1, lastErrorCode: null };
     state.deletionOperations.push(operation);
     state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType: 'relationship', targetId: relationshipAgentId, action: 'forget', redactionEpoch: epoch, createdAt: nowIso() });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'relationship_forgotten', { relationshipAgentId, deletionOperationId: operation.id });
     await persist();
     return { relationshipAgentId, deletionOperationId: operation.id, status: 'forgotten', redactionEpoch: epoch, consistencyToken: tokenFor(state, context) };
@@ -1573,91 +1658,10 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       ...state.assertions.filter(item => item.tenantId === context.tenantId && item.userId === context.subjectUserId).map(item => item.id)
     ]);
     state.outboxEvents = state.outboxEvents.map(item => userAggregateIds.has(item.aggregateId) ? { ...item, status: 'completed', result: 'redacted', leaseOwner: null, leaseUntil: null } : item);
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'account_forgotten', { deletionOperationId: operation.id });
     await persist();
     return { deletionOperationId: operation.id, status: 'forgotten', redactionEpoch: epoch, consistencyToken: tokenFor(state, context) };
-  };
-
-  const cleanDerivedForDeletion = ({ rawEventIds = [], assertionIds = [], versionIds = [], preserveRedactedOutbox = false } = {}) => {
-    state.profileSnapshots ||= [];
-    state.profileSnapshotItems ||= [];
-    state.profileProjections ||= [];
-    state.profileProjectionItems ||= [];
-    state.profileProjectionSources ||= [];
-    state.currentStateSources ||= [];
-    state.indexDocuments ||= [];
-    state.mentionCooldowns ||= [];
-    state.episodes ||= [];
-    state.episodeMembers ||= [];
-    const rawIds = new Set(rawEventIds);
-    const memoryIds = new Set(assertionIds);
-    const versionIdSet = new Set(versionIds);
-    const affectedProjectionIds = new Set(state.profileProjectionItems
-      .filter(item => memoryIds.has(item.assertionId) || versionIdSet.has(item.versionId))
-      .map(item => item.projectionId));
-    state.profileSnapshotItems = state.profileSnapshotItems.filter(item => !memoryIds.has(item.assertionId) && !versionIdSet.has(item.versionId));
-    state.profileProjectionItems = state.profileProjectionItems.filter(item => !memoryIds.has(item.assertionId) && !versionIdSet.has(item.versionId));
-    state.profileProjectionSources = state.profileProjectionSources.filter(item => !memoryIds.has(item.assertionId) && !versionIdSet.has(item.versionId));
-    state.profileProjections = state.profileProjections.map(projection => affectedProjectionIds.has(projection.id) ? { ...projection, status: 'invalidated', updatedAt: nowIso() } : projection);
-    state.indexDocuments = state.indexDocuments.filter(document => !memoryIds.has(document.sourceId) && !versionIdSet.has(document.sourceVersion));
-    state.pins = state.pins.filter(pinRecord => !memoryIds.has(pinRecord.assertionId));
-    state.confirmations = state.confirmations.filter(confirmation => !memoryIds.has(confirmation.candidateAssertionId) && !versionIdSet.has(confirmation.candidateVersionId));
-    state.accessConfirmations = state.accessConfirmations.filter(access => !access.memoryIds?.some(memoryId => memoryIds.has(memoryId)));
-    state.mentionCooldowns = state.mentionCooldowns.filter(record => !memoryIds.has(record.memoryId));
-    const affectedEpisodeIds = new Set(state.episodeMembers
-      .filter(member => rawIds.has(member.rawEventId) || versionIdSet.has(member.assertionVersionId))
-      .map(member => member.episodeId));
-    state.episodeMembers = state.episodeMembers.filter(member => !rawIds.has(member.rawEventId) && !versionIdSet.has(member.assertionVersionId));
-    const episodeIdsWithMembers = new Set(state.episodeMembers.map(member => member.episodeId));
-    state.episodes = state.episodes
-      .filter(episode => episodeIdsWithMembers.has(episode.id) || !affectedEpisodeIds.has(episode.id))
-      .map(episode => affectedEpisodeIds.has(episode.id) ? { ...episode, status: 'invalidated', updatedAt: nowIso() } : episode);
-    state.outboxEvents = preserveRedactedOutbox
-      ? state.outboxEvents.map(event => rawIds.has(event.aggregateId) || memoryIds.has(event.aggregateId) ? { ...event, status: 'completed', result: 'redacted', leaseOwner: null, leaseUntil: null } : event)
-      : state.outboxEvents.filter(event => !rawIds.has(event.aggregateId) && !memoryIds.has(event.aggregateId));
-    state.currentStateSources = state.currentStateSources.filter(item => !rawIds.has(item.rawEventId));
-  };
-
-  const physicallyRemoveAssertions = assertionIds => {
-    const memoryIds = new Set(assertionIds);
-    const versionIds = new Set(state.assertionVersions.filter(version => memoryIds.has(version.assertionId)).map(version => version.id));
-    state.assertions = state.assertions.filter(assertion => !memoryIds.has(assertion.id));
-    state.assertionVersions = state.assertionVersions.filter(version => !versionIds.has(version.id));
-    state.assertionVersionSources = state.assertionVersionSources.filter(source => !versionIds.has(source.versionId));
-    state.mentionCooldowns = (state.mentionCooldowns || []).filter(record => !memoryIds.has(record.memoryId));
-    cleanDerivedForDeletion({ assertionIds: [...memoryIds], versionIds: [...versionIds] });
-    invalidateMutationRecords({ resourceType: 'memory', resourceIds: [...memoryIds] });
-    return { assertionIds: [...memoryIds], versionIds: [...versionIds] };
-  };
-
-  const physicallyRemoveSourceEvents = sourceEventIds => {
-    const rawIds = new Set(sourceEventIds);
-    const removedEventKeys = new Set(state.rawEvents
-      .filter(event => rawIds.has(event.id))
-      .map(event => `${event.eventId}:${event.sourceRevision}`));
-    const sourceRows = state.assertionVersionSources.filter(source => source.sourceType === 'raw_event' && rawIds.has(source.sourceId));
-    const affectedVersionIds = new Set(sourceRows.map(source => source.versionId));
-    const affectedAssertionIds = new Set(state.assertionVersions.filter(version => affectedVersionIds.has(version.id)).map(version => version.assertionId));
-    state.assertionVersionSources = state.assertionVersionSources.filter(source => !(source.sourceType === 'raw_event' && rawIds.has(source.sourceId)));
-    const orphanVersionIds = new Set(state.assertionVersions
-      .filter(version => affectedVersionIds.has(version.id) && !state.assertionVersionSources.some(source => source.versionId === version.id))
-      .map(version => version.id));
-    const orphanAssertionIds = new Set(state.assertionVersions.filter(version => orphanVersionIds.has(version.id)).map(version => version.assertionId));
-    state.assertionVersions = state.assertionVersions.filter(version => !orphanVersionIds.has(version.id));
-    state.assertionVersionSources = state.assertionVersionSources.filter(source => !orphanVersionIds.has(source.versionId));
-    for (const assertion of state.assertions.filter(item => affectedAssertionIds.has(item.id) && !orphanAssertionIds.has(item.id))) {
-      const remaining = state.assertionVersions.filter(version => version.assertionId === assertion.id).sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
-      assertion.currentVersionId = remaining[0]?.id || null;
-      if (remaining[0]) remaining[0].versionStatus = 'current';
-    }
-    state.assertions = state.assertions.filter(assertion => !orphanAssertionIds.has(assertion.id));
-    state.rawEvents = state.rawEvents.filter(event => !rawIds.has(event.id));
-    cleanDerivedForDeletion({ rawEventIds: [...rawIds], assertionIds: [...affectedAssertionIds], versionIds: [...orphanVersionIds] });
-    invalidateMutationRecords({ resourceType: 'source_event', resourceIds: [...rawIds] });
-    invalidateMutationRecords({ resourceType: 'memory', resourceIds: [...affectedAssertionIds] });
-    state.idempotencyRecords = state.idempotencyRecords.filter(record => mutationNamespaceOf(record) !== 'event' || !removedEventKeys.has(record.key));
-    return { rawEventIds: [...rawIds], assertionIds: [...affectedAssertionIds], versionIds: [...orphanVersionIds] };
   };
 
   const sweepRetention = async (rawContext, input = {}) => {
@@ -1665,7 +1669,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const at = asDate(input.now ?? input.at, 'now') || nowIso();
     const timestamp = new Date(at).getTime();
     const limit = Math.max(1, Math.min(1000, Number(input.limit) || 100));
-    const stats = { rawEvents: 0, sessions: 0, assertions: 0, currentStates: 0, confirmations: 0, mentionCooldowns: 0, idempotencyRecords: 0 };
+    const stats = { rawEvents: 0, sessions: 0, assertions: 0, currentStates: 0, confirmations: 0, mentionCooldowns: 0, exportOperations: 0, idempotencyRecords: 0 };
     const expiredRawEvents = state.rawEvents
       .filter(event => event.tenantId === context.tenantId && event.userId === context.subjectUserId && event.deleteAfter && new Date(event.deleteAfter).getTime() <= timestamp)
       .slice(0, limit);
@@ -1743,6 +1747,18 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     state.mentionCooldowns = state.mentionCooldowns.filter(record => !record.cooldownUntil || new Date(record.cooldownUntil).getTime() > timestamp);
     stats.mentionCooldowns = beforeMentionCooldownCount - state.mentionCooldowns.length;
 
+    const expiredExportOperations = state.exportOperations
+      .filter(operation => operation.tenantId === context.tenantId
+        && operation.subjectUserId === context.subjectUserId
+        && operation.expiresAt
+        && new Date(operation.expiresAt).getTime() <= timestamp)
+      .slice(0, limit);
+    if (expiredExportOperations.length) {
+      const expiredIds = new Set(expiredExportOperations.map(operation => operation.id));
+      state.exportOperations = state.exportOperations.filter(operation => !expiredIds.has(operation.id));
+      stats.exportOperations = expiredExportOperations.length;
+    }
+
     if (expirationAssertionIds.size) {
       const assertionIds = new Set(expirationAssertionIds);
       const versionIds = new Set([...expirationVersionIds, ...state.assertionVersions.filter(version => assertionIds.has(version.assertionId)).map(version => version.id)]);
@@ -1767,18 +1783,10 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const changed = Object.values(stats).some(value => value > 0);
     if (!changed) return { ...stats, status: 'noop', consistencyToken: tokenFor(state, context) };
     if (stats.rawEvents || stats.sessions || stats.assertions || stats.currentStates || stats.confirmations) bumpEpoch(context);
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'retention_sweep', { at, ...stats });
     await persist();
     return { ...stats, status: 'swept', consistencyToken: tokenFor(state, context) };
-  };
-
-  const newDeletionOperation = (context, targetType, targetId, requestedScope) => {
-    const at = nowIso();
-    const operation = { id: randomUUID(), tenantId: context.tenantId, subjectUserId: context.subjectUserId, targetType, targetId, requestedScope, action: 'delete', status: 'completed', requestedBy: context.actorId, requestedAt: at, canonicalHiddenAt: at, completedAt: at, redactionEpoch: bumpEpoch(context), resourceRevision: 1, lastErrorCode: null };
-    state.deletionOperations.push(operation);
-    state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType, targetId, action: 'delete', redactionEpoch: operation.redactionEpoch, createdAt: at });
-    return operation;
   };
 
   const deleteSourceEvent = async (rawContext, id, input = {}) => {
@@ -1791,7 +1799,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const removed = physicallyRemoveSourceEvents([sourceEventId]);
     state.idempotencyRecords = state.idempotencyRecords.filter(record => mutationNamespaceOf(record) !== 'event' || record.key !== `${event.eventId}:${event.sourceRevision}`);
     const operation = newDeletionOperation(context, 'source_event', sourceEventId, { sourceEventId });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'source_event_deleted', { sourceEventId, deletionOperationId: operation.id, removedAssertionCount: removed.assertionIds.length });
     await persist();
     return { sourceEventId, deletionOperationId: operation.id, status: operation.status, redactionEpoch: operation.redactionEpoch, consistencyToken: tokenFor(state, context) };
@@ -1815,7 +1823,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     state.episodes = state.episodes.filter(episode => episode.sessionId !== sessionId);
     state.episodeMembers = state.episodeMembers.filter(member => !rawEvents.some(event => event.id === member.rawEventId));
     const operation = newDeletionOperation(context, 'session', sessionId, { sessionId });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'session_deleted', { sessionId, deletionOperationId: operation.id, removedAssertionCount: removedAssertions.assertionIds.length + removedSources.assertionIds.length });
     await persist();
     return { sessionId, deletionOperationId: operation.id, status: operation.status, redactionEpoch: operation.redactionEpoch, consistencyToken: tokenFor(state, context) };
@@ -1832,7 +1840,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     state.profileProjectionItems = (state.profileProjectionItems || []).filter(item => state.profileProjections.some(projection => projection.id === item.projectionId));
     state.profileProjectionSources = (state.profileProjectionSources || []).filter(item => !removedProjectionIds.has(item.projectionId));
     const operation = newDeletionOperation(context, 'relationship', relationshipAgentId, { relationshipAgentId });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'relationship_deleted', { relationshipAgentId, deletionOperationId: operation.id, removedAssertionCount: removed.assertionIds.length });
     await persist();
     return { relationshipAgentId, deletionOperationId: operation.id, status: operation.status, redactionEpoch: operation.redactionEpoch, consistencyToken: tokenFor(state, context) };
@@ -1841,9 +1849,9 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
   const deleteAccount = async (rawContext, input = {}) => {
     const context = contextOf(rawContext);
     assertUserGovernanceActor(context);
-    removeAccountDataForSubject(state, { tenantId: context.tenantId, userId: context.subjectUserId });
+    removeAccountDataForSubjectImpl(state, { tenantId: context.tenantId, userId: context.subjectUserId });
     const operation = newDeletionOperation(context, 'account', context.subjectUserId, { userId: context.subjectUserId });
-    bumpSequence();
+    bumpSequence(context);
     audit(state, context, 'account_deleted', { deletionOperationId: operation.id });
     await persist();
     return { deletionOperationId: operation.id, status: operation.status, redactionEpoch: operation.redactionEpoch, consistencyToken: tokenFor(state, context) };
@@ -1863,7 +1871,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     state.deletionOperations.push(operation);
     state.tombstones.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, targetType: 'memory', targetId: assertion.id, action: 'delete', redactionEpoch: operation.redactionEpoch, createdAt: nowIso() });
     audit(state, context, 'memory_deleted', { memoryId: assertion.id, deletionOperationId: operation.id });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { deletionOperationId: operation.id, status: operation.status, redactionEpoch: operation.redactionEpoch, consistencyToken: tokenFor(state, context) };
   };
@@ -1901,14 +1909,14 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       assertion.status = 'active';
       assertion.resourceRevision += 1;
       assertion.updatedAt = nowIso();
-      bumpSequence();
+      bumpSequence(context);
       state.outboxEvents.push({ id: randomUUID(), tenantId: context.tenantId, userId: context.subjectUserId, consumerName: 'memory-derived', type: 'assertion.active', aggregateId: assertion.id, schemaVersion: 1, commitSeq: state.sequence, status: 'pending', createdAt: nowIso() });
     } else {
       candidateVersion.versionStatus = 'invalidated';
       if (!switchesVersion) assertion.status = 'rejected';
       assertion.resourceRevision += 1;
       assertion.updatedAt = nowIso();
-      bumpSequence();
+      bumpSequence(context);
     }
     audit(state, context, `memory_${decision}d`, { memoryId: assertion.id, confirmationId: confirmation.id });
     await persist();
@@ -1922,7 +1930,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     assertEnum(storageDirective, allowedStorageDirectives, 'INVALID_STORAGE_DIRECTIVE', 'storage_directive');
     if (storageDirective === 'do_not_store') {
       audit(state, context, 'state_accepted_no_store', { noStoreReason: 'caller_directive' });
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       return { status: 'accepted_no_store', consistencyToken: tokenFor(state, context) };
     }
@@ -1935,7 +1943,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const sensitivity = classifySensitivity({ ...input, content });
     if (sensitivity === 'S3') {
       audit(state, context, 'state_rejected_s3');
-      bumpSequence();
+      bumpSequence(context);
       await persist();
       throw new MemoryModuleError('S3_CONTENT_REJECTED', 'Sensitive content cannot be stored', { status: 422 });
     }
@@ -1955,7 +1963,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
       state.currentStateSources.push({ tenantId: context.tenantId, currentStateId: record.id, userId: context.subjectUserId, rawEventId: sourceEvent.id, sourceRole: 'observed', createdAt: nowIso() });
     }
     audit(state, context, 'current_state_written', { stateId: record.id, sessionId: session.id });
-    bumpSequence();
+    bumpSequence(context);
     await persist();
     return { currentState: clone(record), consistencyToken: tokenFor(state, context) };
   };
@@ -2028,6 +2036,7 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
   const idempotentConfirmAccess = wrapMutation('access_confirmation.confirm', confirmAccess, { inputIndex: 2, resourceType: 'access_confirmation', resourceIdIndex: 1 });
   const idempotentWriteCurrentState = wrapMutation('current_state.write', writeCurrentState, { resourceType: 'current_state' });
   const idempotentRecordMention = wrapMutation('mention.record', recordMention);
+  const idempotentCreateExportOperation = wrapMutation('export.create', createExportOperation);
 
   return {
     state,
@@ -2063,6 +2072,9 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     reject: idempotentReject,
     confirmAccess: idempotentConfirmAccess,
     writeCurrentState: idempotentWriteCurrentState,
+    createExportOperation: idempotentCreateExportOperation,
+    getExportOperation,
+    downloadExport,
     getDeletionOperation,
     listConfirmations
   };

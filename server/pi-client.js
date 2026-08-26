@@ -1,18 +1,30 @@
 import { spawn } from 'node:child_process';
 
+export const PI_RPC_SAFE_ARGS = [
+  '--no-tools',
+  '--no-extensions',
+  '--no-skills',
+  '--no-context-files',
+  '--no-prompt-templates',
+  '--no-themes',
+  '--no-approve'
+];
+
 export class PiClientError extends Error {
   constructor(code, message, cause) { super(message, { cause }); this.name = 'PiClientError'; this.code = code; }
 }
 
 // Pi RPC 客户端：spawn `pi --mode rpc`，JSONL over stdio。
 // prompt(message, onEvent)：发送提示词，每个事件实时回调，agent_settled 时 resolve。
-export function createPiClient({ cwd = process.cwd(), timeoutMs = 10 * 60 * 1000 } = {}) {
+export function createPiClient({ cwd = process.cwd(), timeoutMs = 10 * 60 * 1000, args = PI_RPC_SAFE_ARGS, spawnProcess = spawn } = {}) {
+  if (!Array.isArray(args) || args.some(item => typeof item !== 'string')) throw new TypeError('Pi client args must be an array of strings');
+  if (typeof spawnProcess !== 'function') throw new TypeError('Pi client spawnProcess must be a function');
   let child = null;
   let buffer = '';
 
   const start = () => {
     if (child) return child;
-    child = spawn('pi', ['--mode', 'rpc', '--no-session'], {
+    child = spawnProcess('pi', ['--mode', 'rpc', '--no-session', ...args], {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,

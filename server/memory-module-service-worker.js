@@ -59,6 +59,7 @@ export function createMemoryModuleServiceWorker({
   supportedSchemaVersions = [1],
   retentionSweepIntervalMs = 60_000,
   retentionSweepBatchSize = 10,
+  onClaim = async () => {},
   onResult = () => {},
   onError = () => {}
 } = {}) {
@@ -89,6 +90,7 @@ export function createMemoryModuleServiceWorker({
     const claimed = await repository.claimOutboxEvent({ workerId, leaseMs, now, eventTypes, consumerName: 'memory-derived' });
     if (!claimed) return { status: 'idle' };
     const { event: claimedEvent, context } = claimed;
+    await onClaim({ event: claimedEvent, context, workerId });
     const state = await repository.load(context);
     const event = state.outboxEvents?.find(item => item.id === claimedEvent.id);
     if (!event) {

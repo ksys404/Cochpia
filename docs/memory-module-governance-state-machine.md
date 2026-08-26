@@ -26,6 +26,7 @@ candidate ────────────────► active ─► supe
 | correct/pin/unpin/revoke/forget/delete memory | `resource_revision` 精确匹配 | stale revision 返回 409，不修改状态 |
 | confirm/reject | confirmation pending、未过期、revision 匹配 | 已决定/过期返回 409 |
 | forget/delete source/session/relationship/account | subject user governance actor | Agent 只能读，不能治理 |
+| create/download export operation | subject user governance actor; operation commit sequence still current | stale snapshot 返回 409，过期 operation 返回 410；不复制 canonical 正文到 operation metadata |
 | outbox processing | lease owner/fence token 有效 | fenced worker 不得提交结果 |
 
 ## Visibility precedence
