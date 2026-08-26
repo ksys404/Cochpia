@@ -73,7 +73,7 @@ npm run evaluate:memory-synthetic
 
 PostgreSQL smoke 需要 `DATABASE_URL`，缺少时只会安全跳过；设置 `MEMORY_MODULE_SMOKE_APPLY_SCHEMA=true` 会在随机隔离 tenant 上重复应用 canonical schema，并验证主体隔离、租约 fencing 和并发冲突。`migrate:memory-pgvector` 需要明确的 `MEMORY_MODULE_EMBEDDING_DIMENSIONS`，会创建 pgvector 列、回填 JSONB embedding 并建立 HNSW cosine 索引；`--dry-run` 不连接数据库。设置 `MEMORY_MODULE_NATIVE_RETRIEVAL=true` 后，retrieve 使用轻量 metadata + PostgreSQL native candidate 查询，context-bundle 使用 bounded profile/current-state/episode read model，并继续经过内存层的 policy/confirmation finalization。可选 `MEMORY_MODULE_REDIS_URL` 只缓存带 tenant/user、grant/privacy/commit 版本的无 query bounded ContextBundle read model；Redis 不可用时服务继续走 PostgreSQL canonical 路径，治理/写入会推进 subject generation 使旧缓存失效。`npm run evaluate:memory-synthetic` 会用真实 in-memory domain 跑完 600 条 synthetic scaffold 并生成标注为 `synthetic`、不计入 Alpha acceptance 的结果；真实评测仍需 `MEMORY_EVAL_RESULTS=... npm run evaluate:memory`。benchmark 默认和 1M 规模命令都是单进程内存 BM25 sanity check，不替代真实 PostgreSQL/pgvector acceptance run。
 
-发布前进度、隐私/密钥审计和 GitHub 推送阻断项见：[`docs/开发进度与GitHub发布前审计.md`](docs/开发进度与GitHub发布前审计.md)。
+完整文档入口见：[`docs/README.md`](docs/README.md)。发布前进度、隐私/密钥审计和 GitHub 推送阻断项见：[`docs/开发进度与GitHub发布前审计.md`](docs/开发进度与GitHub发布前审计.md)。
 
 ## Production modes
 

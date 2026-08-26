@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-export function applyPersonalityChange(personality, history, { evidenceId, proposedChange, action = 'growth_confirmed', now = new Date().toISOString() } = {}) {
+export function applyPersonalityChange(personality, history, { evidenceId, sourceEventId = null, sourceAssertionVersionId = null, proposedChange, action = 'growth_confirmed', now = new Date().toISOString() } = {}) {
   const traitKey = String(proposedChange?.traitKey || '').trim();
   const delta = Number(proposedChange?.delta);
   if (!traitKey || !Number.isFinite(delta) || delta === 0) return null;
@@ -18,6 +18,8 @@ export function applyPersonalityChange(personality, history, { evidenceId, propo
     updatedAt: now,
     action,
     sourceEvidenceId: evidenceId || null,
+    sourceEventId: sourceEventId || null,
+    sourceAssertionVersionId: sourceAssertionVersionId || null,
     previousVersion
   }, ...history];
   return { personality: nextPersonality, history: nextHistory };

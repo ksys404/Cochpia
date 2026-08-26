@@ -18,6 +18,18 @@ export function mergeState(base, incoming) {
   };
   ['sessions', 'memories', 'evidence', 'personalityHistory', 'personalityAudit', 'agents'].forEach(mergeById);
 
+  if (incoming.deletionRecords && Array.isArray(incoming.deletionRecords)) {
+    const target = Array.isArray(merged.deletionRecords) ? merged.deletionRecords.slice() : [];
+    const existing = new Set(target.map(item => String(item.id)));
+    for (const item of incoming.deletionRecords) {
+      if (item?.id !== undefined && !existing.has(String(item.id))) {
+        target.push(item);
+        existing.add(String(item.id));
+      }
+    }
+    merged.deletionRecords = target;
+  }
+
   if (incoming.messages && typeof incoming.messages === 'object') {
     merged.messages = { ...(merged.messages || {}) };
     for (const [sessionId, messages] of Object.entries(incoming.messages)) {
@@ -37,6 +49,25 @@ export function mergeState(base, incoming) {
   if (!merged.personality && incoming.personality) merged.personality = incoming.personality;
   if (!merged.profile && incoming.profile) merged.profile = incoming.profile;
   if (!merged.workspacePreferences && incoming.workspacePreferences) merged.workspacePreferences = incoming.workspacePreferences;
+  if (!merged.lifeState && incoming.lifeState) merged.lifeState = incoming.lifeState;
+  if (!merged.relationshipStates && incoming.relationshipStates) merged.relationshipStates = incoming.relationshipStates;
+  if (!merged.personalityProjection && incoming.personalityProjection) merged.personalityProjection = incoming.personalityProjection;
+  if (incoming.companion && typeof incoming.companion === 'object') {
+    const currentCompanion = merged.companion && typeof merged.companion === 'object' ? structuredClone(merged.companion) : {};
+    currentCompanion.sessionMappings ||= structuredClone(incoming.companion.sessionMappings || {});
+    currentCompanion.exportOperations ||= structuredClone(incoming.companion.exportOperations || []);
+    const currentOutbox = Array.isArray(currentCompanion.interactionOutbox) ? currentCompanion.interactionOutbox.slice() : [];
+    const existingOutbox = new Set(currentOutbox.map(item => String(item?.id)));
+    for (const item of Array.isArray(incoming.companion.interactionOutbox) ? incoming.companion.interactionOutbox : []) {
+      if (item?.id !== undefined && !existingOutbox.has(String(item.id))) {
+        currentOutbox.push(item);
+        existingOutbox.add(String(item.id));
+      }
+    }
+    currentCompanion.interactionOutbox = currentOutbox;
+    currentCompanion.dataRevision = Math.max(Number(currentCompanion.dataRevision || 0), Number(incoming.companion.dataRevision || 0));
+    merged.companion = currentCompanion;
+  }
 
   if (incoming.memoryModule && typeof incoming.memoryModule === 'object') {
     const currentModule = merged.memoryModule && typeof merged.memoryModule === 'object' ? structuredClone(merged.memoryModule) : {};
@@ -55,7 +86,7 @@ export function mergeState(base, incoming) {
       }
       currentModule[key] = target;
     };
-    for (const key of ['rawEvents', 'outboxEvents', 'sessions', 'profileSnapshots', 'profileSnapshotItems', 'profileProjections', 'profileProjectionItems', 'indexDocuments', 'episodes', 'episodeMembers', 'assertions', 'assertionVersions', 'assertionVersionSources', 'currentStates', 'currentStateSources', 'profileProjectionSources', 'confirmations', 'accessConfirmations', 'mentionCooldowns', 'pins', 'scopeGrants', 'deletionOperations', 'tombstones', 'auditEvents', 'idempotencyRecords', 'jobAttempts']) mergeModuleArray(key);
+    for (const key of ['rawEvents', 'outboxEvents', 'sessions', 'profileSnapshots', 'profileSnapshotItems', 'profileProjections', 'profileProjectionItems', 'indexDocuments', 'episodes', 'episodeMembers', 'assertions', 'assertionVersions', 'assertionVersionSources', 'currentStates', 'currentStateSources', 'profileProjectionSources', 'confirmations', 'accessConfirmations', 'mentionCooldowns', 'pins', 'scopeGrants', 'deletionOperations', 'tombstones', 'exportOperations', 'auditEvents', 'idempotencyRecords', 'jobAttempts']) mergeModuleArray(key);
     if (incomingModule.redactionEpochs && typeof incomingModule.redactionEpochs === 'object') {
       currentModule.redactionEpochs ||= {};
       for (const [key, value] of Object.entries(incomingModule.redactionEpochs)) {
@@ -64,6 +95,12 @@ export function mergeState(base, incoming) {
     }
     currentModule.sequence = Math.max(Number(currentModule.sequence || 0), Number(incomingModule.sequence || 0));
     currentModule.persistenceBaseSequence = Math.max(Number(currentModule.persistenceBaseSequence || 0), Number(incomingModule.persistenceBaseSequence || 0));
+    if (incomingModule.subjectSequences && typeof incomingModule.subjectSequences === 'object') {
+      currentModule.subjectSequences ||= {};
+      for (const [key, value] of Object.entries(incomingModule.subjectSequences)) {
+        currentModule.subjectSequences[key] = Math.max(Number(currentModule.subjectSequences[key] || 0), Number(value || 0));
+      }
+    }
     currentModule.grantVersion = Math.max(Number(currentModule.grantVersion || 0), Number(incomingModule.grantVersion || 0));
     currentModule.policyVersion ||= incomingModule.policyVersion || 'memory-policy-v1';
     currentModule.legacyImportVersion = Math.max(Number(currentModule.legacyImportVersion || 0), Number(incomingModule.legacyImportVersion || 0));
