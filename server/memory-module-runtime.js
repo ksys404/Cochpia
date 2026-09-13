@@ -198,6 +198,16 @@ export function createMemoryModuleRuntime({
       async dream(limit = 5) {
         const items = await this.list({ limit });
         return items.slice(0, clamp(Number(limit) || 5, 1, 50));
+      },
+      // 数据主体权利:账号级「隐藏」(留墓碑 + 提升 redactionEpoch,可审计)与物理擦除。
+      // 语义由 Memory Module 治理层定义,这里只做出口。
+      async forgetAccount(input = {}) {
+        await ensure();
+        return module.forgetAccount(context, input);
+      },
+      async deleteAccount(input = {}) {
+        await ensure();
+        return module.deleteAccount(context, input);
       }
     };
   };

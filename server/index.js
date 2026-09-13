@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { getStorageStatus, loadState, loadUserState, saveState, storageProvider } from './store.js'; import { createMemoryModuleRuntime } from './memory-module-runtime.js'; import { createGrowthEvidenceService } from './growth-evidence.js'; import { createEventService } from './events.js';
+import { getStorageStatus, loadState, loadUserState, saveState, deleteUserState, storageProvider } from './store.js'; import { createMemoryModuleRuntime } from './memory-module-runtime.js'; import { createGrowthEvidenceService } from './growth-evidence.js'; import { createEventService } from './events.js';
 import { createModelProvider, listModelProviders, resolveModelConfig, resolveModelSelection } from './model-provider.js'; import { authenticateRequest, authMode, validateAuthStorage } from './auth.js'; import { buildRuntimeContext, findRegenerationTarget } from './runtime-context.js';
 import { createSseEvent, formatSseEvent } from './sse.js'; import { queryCollection } from './collection-query.js'; import { agentAvatar, createAgentService, resolveMessageAvatar } from './agent-service.js'; import { collectSyncChanges } from './sync-service.js'; import { createObservability } from './observability.js';
 import { createMusicService } from './music-service.js'; import { createNeteaseMusicAdapter } from './netease-music-adapter.js'; import { executeTool, findTool, getToolRisk, toOpenAITools } from './tools.js'; import { createPiClient } from './pi-client.js'; import { maybeCompactConversation } from './compaction.js';
@@ -17,6 +17,7 @@ import { createRouter as createMiscRouter } from './routes/misc.js'; import { cr
 import { createRouter as createMemoriesRouter } from './routes/memories.js'; import { createRouter as createProfileRouter } from './routes/profile.js'; import { createRouter as createWorkflowsRouter } from './routes/workflows.js'; import { createRouter as createWorkbenchRouter } from './routes/workbench.js';
 import { createRouter as createWakeRouter } from './routes/wake.js';
 import { createRouter as createEventsRouter } from './routes/events.js';
+import { createRouter as createAccountRouter } from './routes/account.js';
 
 const app = express(); const observability = createObservability({ rateLimitMax: Number(process.env.API_RATE_LIMIT_MAX || 120) }); const port = Number(process.env.PORT || 8787);
 const clientOrigin = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
@@ -221,7 +222,7 @@ const chatRuntime = createChatRuntime({
   waitForApproval: approvalRegistry.waitForApproval, randomUUID
 });
 
-const routeDeps = { state, saveState, fail, getSession, getMessage, touchSession, currentUserId, sessionBelongsToCurrentUser, agentTaskOwner, agents, resolveMessageAvatar, music, observability, model, storageProvider, getStorageStatus, listModelProviders, dynamicAlphaObservations, queryCollection, randomUUID, defaultModelSelection, resolveModelSelection, createModelProvider, compatibilityMemoryForRequest, chatMemoryForRequest, memoryRuntime, collectSyncChanges, mergeState, sanitizeWorkspacePreferences, growthEvidence, events, collaborationRuns, loadWorkflowSpec, listWorkflows, runCollaborationWorkflow, proposals, agentTasks, taskScheduler, taskEvent, recordTaskEvidence, activeAgentRuns, activeVerifications, verifyAgentTask, resolveVerificationWorkdir, path, fs, readTaskPatch, removeTaskSandbox, pendingAgentApprovals, activeRuns, streamRuns, runtimeKey, attachStreamResponse, send, finishRun, approvalRegistry, chatRuntime, workflowHooks };
+const routeDeps = { state, saveState, fail, getSession, getMessage, touchSession, currentUserId, sessionBelongsToCurrentUser, agentTaskOwner, agents, resolveMessageAvatar, music, observability, model, storageProvider, deleteUserState, getStorageStatus, listModelProviders, dynamicAlphaObservations, queryCollection, randomUUID, defaultModelSelection, resolveModelSelection, createModelProvider, compatibilityMemoryForRequest, chatMemoryForRequest, memoryRuntime, collectSyncChanges, mergeState, sanitizeWorkspacePreferences, growthEvidence, events, collaborationRuns, loadWorkflowSpec, listWorkflows, runCollaborationWorkflow, proposals, agentTasks, taskScheduler, taskEvent, recordTaskEvidence, activeAgentRuns, activeVerifications, verifyAgentTask, resolveVerificationWorkdir, path, fs, readTaskPatch, removeTaskSandbox, pendingAgentApprovals, activeRuns, streamRuns, runtimeKey, attachStreamResponse, send, finishRun, approvalRegistry, chatRuntime, workflowHooks };
 app.use('/', createMiscRouter(routeDeps));
 app.use('/', createMusicRouter(routeDeps));
 app.use('/', createSessionsRouter(routeDeps));
@@ -232,6 +233,7 @@ app.use('/', createWorkflowsRouter(routeDeps));
 app.use('/', createWorkbenchRouter(routeDeps));
 app.use('/', createWakeRouter(routeDeps));
 app.use('/', createEventsRouter(routeDeps));
+app.use('/', createAccountRouter(routeDeps));
 
 app.use('/api', (_, res) => fail(res, 404, 'API_ROUTE_NOT_FOUND', 'API route not found'));
 
