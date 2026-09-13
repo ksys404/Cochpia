@@ -41,7 +41,9 @@ function classifyStorageError(error) {
 function logStorageError(error, operation, attempt) {
   const classified = classifyStorageError(error);
   storageStatus.lastError = { code: classified.code, operation, at: new Date().toISOString() };
-  console.error(JSON.stringify({ event: 'storage_error', code: classified.code, operation, attempt }));
+  // 只补原始错误码(如 22P02)。别把 PG 的 message 记进去:它可能带上参数值,那是用户数据。
+  const causeCode = error !== classified && error?.code ? String(error.code) : null;
+  console.error(JSON.stringify({ event: 'storage_error', code: classified.code, operation, attempt, causeCode }));
   return classified;
 }
 
@@ -139,14 +141,38 @@ async function savePostgresState(state) {
   }, 'save');
 }
 
-function emptyUserState(baseState) {
-  const next = structuredClone(baseState);
-  next.sessions = [];
-  next.messages = {};
-  next.memories = [];
-  next.evidence = [];
-  next.agentTasks = [];
-  return next;
+// 哪些键可以从 base state 继承给新用户。
+// 目前**故意为空**:base state(单用户时代遗留)里只有上一个用户的内容(画像/角色/记忆/内在状态),
+// 没有任何应用级共享配置。将来若要共享某项配置,必须显式加进来 —— 默认不继承。
+const INHERITED_STATE_KEYS = Object.freeze([]);
+const EMPTY_USER_PROFILE = Object.freeze({ name: '', gender: 'none', age: null, avatar: '✦' });
+
+/**
+ * 按用户分表后,新用户的状态曾经是 structuredClone(baseState) 再清掉几个字段 ——
+ * 结果是把上一位用户的画像/立绘/角色/记忆整包发给了新注册用户(实测已在第二个账号上发生)。
+ * 这里改成 fail-closed:只保留显式的应用级键,其余一律从规范空值重建。
+ */
+export function emptyUserState(baseState) {
+  const inherited = {};
+  for (const key of INHERITED_STATE_KEYS) {
+    if (baseState && Object.hasOwn(baseState, key)) inherited[key] = structuredClone(baseState[key]);
+  }
+  return {
+    ...inherited,
+    mode: 'companion',
+    profile: { ...EMPTY_USER_PROFILE },
+    sessions: [],
+    messages: {},
+    memories: [],
+    evidence: [],
+    agents: [],
+    agentTasks: [],
+    proposals: [],
+    events: [],
+    // routes/workflows.js 会直接 state.collaborationRuns.push(run)(没有守卫),必须给空数组
+    collaborationRuns: [],
+    memoryModule: createMemoryModuleState()
+  };
 }
 
 export async function loadUserState(userId, baseState) {
@@ -187,6 +213,41 @@ async function saveUserState(userId, state) {
     await database.query('INSERT INTO cochpia_user_states (user_id,state,updated_at) VALUES ($1,$2::jsonb,now()) ON CONFLICT (user_id) DO UPDATE SET state=EXCLUDED.state, updated_at=now()', [userId, json]);
   }, 'save_user');
   userStateCache.set(userId, { json, expiresAt: Date.now() + userStateCacheTtlMs });
+}
+
+// 历史迁移脚本写入过的按用户分表。运行时只读 cochpia_user_states,
+// 但擦除时必须一并清掉,否则迁移过的数据会残留。
+const LEGACY_USER_TABLES = ['cochpia_sessions', 'cochpia_memories', 'cochpia_personality_versions', 'cochpia_growth_evidence'];
+
+/**
+ * 账号级擦除:删掉该用户名下的全部应用数据(PG 行级删除)并清本地缓存。
+ * 内存模块的 state 本身就存在 cochpia_user_states 里,所以删行即物理擦除。
+ * 只支持 postgres:JSON 模式是单用户开发态,不存在「某个账号的数据」这种边界。
+ */
+export async function deleteUserState(userId) {
+  const id = String(userId || '').trim();
+  if (!id) throw new StorageError('ACCOUNT_USER_ID_REQUIRED', 'A user id is required to erase account data');
+  if (id === 'local-user') throw new StorageError('ACCOUNT_LOCAL_NOT_ERASABLE', 'The local development account cannot be erased through this endpoint');
+  if (storageProvider !== 'postgres') throw new StorageError('ACCOUNT_ERASURE_UNSUPPORTED', 'Account erasure requires STORAGE_PROVIDER=postgres');
+  userStateCache.delete(id);
+  const removed = await withRetry(async () => {
+    const database = await getPostgresPool();
+    const result = { userStates: 0, users: 0, legacyRows: {} };
+    // 统一用 <column>::text = $1 比较:这几张表的 id/user_id 类型不一致(text 与 uuid 混用),
+    // 直接把参数拿去比 uuid 列会在非 uuid 主体上抛 22P02 —— 而擦除必须永远能跑完。
+    result.userStates = (await database.query('DELETE FROM cochpia_user_states WHERE user_id::text = $1', [id])).rowCount;
+    if ((await database.query('SELECT to_regclass($1) AS name', ['cochpia_users'])).rows[0]?.name) {
+      result.users = (await database.query('DELETE FROM cochpia_users WHERE id::text = $1', [id])).rowCount;
+    }
+    for (const table of LEGACY_USER_TABLES) {
+      if (!(await database.query('SELECT to_regclass($1) AS name', [table])).rows[0]?.name) continue;
+      result.legacyRows[table] = (await database.query(`DELETE FROM ${table} WHERE user_id::text = $1`, [id])).rowCount;
+    }
+    return result;
+  }, 'delete_user');
+  // 擦除后立刻重新载入会得到 emptyUserState(legacy claim 已存在),不会把旧数据读回来。
+  userStateCache.delete(id);
+  return removed;
 }
 
 export function getStorageStatus() {
