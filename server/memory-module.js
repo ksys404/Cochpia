@@ -1121,11 +1121,18 @@ export function createMemoryModule(state = createMemoryModuleState(), persistNow
     const documents = retrievalDocuments(context, purpose, queryRoute, agentId);
     const hybridEnabled = featureFlags.hybridRetrieval === true;
     const vectorEnabled = featureFlags.vectorRetrieval === true;
+    const importanceEnabled = featureFlags.importanceRanking === true;
     let result;
     const embed = typeof embeddingGateway === 'function' ? embeddingGateway : embeddingGateway?.embed;
-    if (!hybridEnabled && !vectorEnabled) result = finalizeRetrieve(context, { ...input, queryRoute }, bm25Search(documents, query, { limit: 50 }), 'bm25');
-    else if (hybridEnabled) {
-      const hybrid = await hybridSearch(documents, query, { embed, limit: 50, timeoutMs: embeddingTimeoutMs });
+    if (!hybridEnabled && !vectorEnabled && !importanceEnabled) result = finalizeRetrieve(context, { ...input, queryRoute }, bm25Search(documents, query, { limit: 50 }), 'bm25');
+    else if (hybridEnabled || importanceEnabled) {
+      // 开了 importanceRanking 就走融合路径:没有 embed 时 hybridSearch 会自然退化成「BM25 + 信号两路」。
+      const hybrid = await hybridSearch(documents, query, {
+        embed,
+        limit: 50,
+        timeoutMs: embeddingTimeoutMs,
+        signals: { importance: importanceEnabled, recency: importanceEnabled }
+      });
       result = finalizeRetrieve(context, { ...input, queryRoute }, hybrid.items, hybrid.mode);
     } else {
       const vector = await vectorSearch(documents, query, embed, { limit: 50, timeoutMs: embeddingTimeoutMs });

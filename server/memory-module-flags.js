@@ -3,6 +3,8 @@ export const MEMORY_FEATURE_DEFAULTS = Object.freeze({
   autoProfileUpdate: false,
   hybridRetrieval: false,
   vectorRetrieval: false,
+  // 把重要性/新近度作为额外两路接进 RRF 融合(默认关:它会影响召回顺序)。
+  importanceRanking: false,
   episodeGrouping: false,
   proactiveMention: false
 });
