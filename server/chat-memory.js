@@ -1,3 +1,5 @@
+import { assessMemoryImportance } from './memory-importance.js';
+
 const uniqueItems = items => {
   const seen = new Set();
   return items.filter(item => {
@@ -42,7 +44,7 @@ export function memoryBundleToOverview(bundle = {}) {
     source: item.source,
     visibility: 'policy-controlled',
     strength: 1,
-    importance: 0.5,
+    importance: Number.isFinite(Number(item.importance)) ? Number(item.importance) : 0.5,
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString()
   }));
 }
@@ -76,7 +78,9 @@ export function createChatMemoryAdapter({ memoryModule, state, context, persistS
           memoryType: item.type || 'fact',
           sensitivity: 'S0',
           confidence: item.confidence,
-          importance: item.importance,
+          // 老记忆没有 importance 字段:不传就会落到 clamp(undefined)=0,
+          // 等于把全部历史记忆一次性判成「毫无价值」。
+          importance: item.importance ?? assessMemoryImportance(item.summary, { memoryType: item.type || 'fact' }).score,
           source: item.source || 'legacy-import',
           mentionPolicy: item.visibility === 'private' ? 'contextualizable_only' : 'mentionable'
         });
@@ -124,14 +128,17 @@ export function createChatMemoryAdapter({ memoryModule, state, context, persistS
 
   const remember = async ({ messageId, content, sourceEventId = null } = {}) => {
     if (!String(content || '').trim()) return null;
+    const memoryType = inferChatMemoryType(content);
+    // 重要性由内容信号算出,不再是写死的 0.6。
+    const importance = assessMemoryImportance(content, { memoryType });
     return memoryModule.hold(context, {
       idempotency_key: `chat-memory:${messageId}`,
       content: String(content).slice(0, 4000),
-      memoryType: inferChatMemoryType(content),
+      memoryType,
       assertionType: 'observed_fact',
       sensitivity: 'S0',
       confidence: 0.82,
-      importance: 0.6,
+      importance: importance.score,
       sourceEventId,
       promotionReason: 'chat_explicit_or_significant_message'
     });

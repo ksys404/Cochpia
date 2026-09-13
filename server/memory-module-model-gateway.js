@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { classifyMemorySensitivity, isSecretMemoryContent } from './memory-module.js';
+import { assessMemoryImportance } from './memory-importance.js';
 
 function gatewayError(code, message, { retryable = false } = {}) {
   const error = new Error(message);
@@ -107,7 +108,8 @@ function normalizeExtractionOutput(value) {
       sessionId: candidate.sessionId ? String(candidate.sessionId).slice(0, 200) : null,
       sensitivity,
       confidence: Number.isFinite(Number(candidate.confidence)) ? Math.max(0, Math.min(1, Number(candidate.confidence))) : 0,
-      importance: Number.isFinite(Number(candidate.importance)) ? Math.max(0, Math.min(1, Number(candidate.importance))) : 0,
+      // 模型没给 importance 时用本地信号兵底:以前会落到 0,等于判「毫无价值」。
+      importance: Number.isFinite(Number(candidate.importance)) ? Math.max(0, Math.min(1, Number(candidate.importance))) : assessMemoryImportance(content, { memoryType: candidate.memoryType }).score,
       assertionType: ['observed_fact', 'inferred_fact', 'relationship_signal'].includes(candidate.assertionType) ? candidate.assertionType : 'observed_fact',
       extractionMethod: String(candidate.extractionMethod || 'model').slice(0, 80)
     };

@@ -2,6 +2,7 @@ import { createMemoryModule, createMemoryModuleState } from './memory-module.js'
 import { createMemoryModuleRouter } from './memory-module-api.js';
 import { resolveMemoryFeatureFlags } from './memory-module-flags.js';
 import { createChatMemoryAdapter } from './chat-memory.js';
+import { assessMemoryImportance } from './memory-importance.js';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, Number(value)));
 
@@ -113,7 +114,8 @@ export function createMemoryModuleRuntime({
             memoryType: item.type || 'fact',
             sensitivity: 'S0',
             confidence: item.confidence,
-            importance: item.importance,
+            // 与 chat-memory 的同名导入路径保持一致:缺失时按内容算,不要落到 0。
+            importance: item.importance ?? assessMemoryImportance(item.summary, { memoryType: item.type || 'fact' }).score,
             source: item.source || 'legacy-import',
             mentionPolicy: item.visibility === 'private' ? 'contextualizable_only' : 'mentionable'
           });
