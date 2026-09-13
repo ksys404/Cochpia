@@ -3,13 +3,54 @@ export function createChatRuntime(deps) {
     state, saveState, getSession, touchSession, currentUserId, runtimeKey,
     agents, agentAvatar, createModelProvider, resolveModelSelection,
     buildRuntimeContext, findRegenerationTarget, routeMessage,
-    recordDynamicAlphaObservation, chatMemoryForRequest, shouldRemember,
+    recordDynamicAlphaObservation, chatMemoryForRequest, shouldRemember, collectUpcomingEvents,
     maybeCompactConversation, executeTool, findTool, getToolRisk, toOpenAITools,
     innerContinuity,
     wakeEngine,
     createPiClient, agentTasks, taskScheduler, send, fail, activeRuns, streamRuns,
-    attachStreamResponse, finishRun, chatRunTimeoutMs, waitForApproval, randomUUID
+    attachStreamResponse, finishRun, chatRunTimeoutMs, waitForApproval, randomUUID,
+    chatPrepareTimeoutMs = Math.max(1_000, Number(process.env.CHAT_PREPARE_TIMEOUT_MS || 30_000)),
+    chatTerminationGraceMs = Math.max(500, Number(process.env.CHAT_TERMINATION_GRACE_MS || 5_000))
   } = deps;
+
+  // 准备阶段的看门狗:存储写入 / Memory Module / 唤醒对账都发生在 SSE 建立之前,
+  // 既没有超时也没有兜底。上游一旦挂住,客户端会静默悬挂(连响应头都收不到)。
+  const armPrepareGuard = res => {
+    const guard = { fired: false, passed: false, timer: null };
+    guard.timer = setTimeout(() => {
+      if (guard.passed || res.headersSent || res.writableEnded || res.destroyed) return;
+      guard.fired = true;
+      fail(res, 503, 'CHAT_PREPARE_TIMEOUT', 'Preparing this turn timed out before the stream started');
+    }, chatPrepareTimeoutMs);
+    guard.timer.unref?.();
+    // 准备结束。返回 true 表示可以继续,false 表示看门狗已经代为回应过。
+    return () => {
+      guard.passed = true;
+      clearTimeout(guard.timer);
+      return !guard.fired;
+    };
+  };
+
+  // 超时不能只 abort:上游若忽视 abort 信号,SSE 会一直开着。
+  // 先标记 cancelled 让在飞循环立刻退出,再挂一个兜底定时器强制收尾。
+  const armRunDeadline = (run, res, messageId = null) => {
+    run.deadline = setTimeout(() => {
+      if (run.finished) return;
+      run.timedOut = true;
+      run.cancelled = true;
+      run.controller.abort();
+      run.termination = setTimeout(() => {
+        if (run.response && !run.response.writableEnded && !run.response.destroyed) {
+          run.cancelNotified = true;
+          send(run.response, 'error', { runId: run.id, code: 'CHAT_RUN_TIMEOUT', message: '本轮对话超时,已中断。' }, run);
+          send(run.response, 'done', { runId: run.id, ok: false, timedOut: true, messageId }, run);
+          run.response.end();
+        }
+        finishRun(run);
+      }, chatTerminationGraceMs);
+      run.termination.unref?.();
+    }, chatRunTimeoutMs);
+  };
 
   const dispatchAgentTask = async (args, ownerId, res, run) => {
     const target = String(args.target || '').toLowerCase();
@@ -153,6 +194,7 @@ export function createChatRuntime(deps) {
     if (regenerateMessageId && !regeneration) return fail(res, 404, 'REGENERATE_TARGET_NOT_FOUND', 'Assistant message with a preceding user message was not found');
     const userMessage = regeneration?.user || { id: randomUUID(), role: 'user', content: String(message).trim().slice(0, 8000), createdAt: new Date().toISOString(), channel: activeChannel };
     const session = getSession(sessionId);
+    const proceed = armPrepareGuard(res);
     await wakeEngine?.reconcileAll?.();
     // 私聊绑定到某个 Agent 时，用该 Agent 的人格与模型覆盖会话默认（群聊走 /api/chat/group，不受此影响）。
     const boundAgent = session?.agentId ? agents.get(session.agentId) : null;
@@ -197,9 +239,10 @@ export function createChatRuntime(deps) {
     const restoreRegeneration = () => { if (regeneration) { delete regeneration.assistant.supersededAt; delete regeneration.assistant.supersededBy; } };
     const runKey = runtimeKey(sessionId);
     if (activeRuns.has(runKey)) return fail(res, 409, 'CHAT_ALREADY_RUNNING', 'A chat run is already active for this session');
+    if (!proceed()) return;
     const run = { id: randomUUID(), key: runKey, userId: currentUserId(), sessionId, controller: new AbortController(), cancelled: false, finished: false, timedOut: false, sequence: 0, events: [], response: null, connected: false };
-    run.deadline = setTimeout(() => { if (run.finished) return; run.timedOut = true; run.controller.abort(); }, chatRunTimeoutMs);
     activeRuns.set(runKey, run); streamRuns.set(run.id, run); attachStreamResponse(run, res);
+    armRunDeadline(run, res, assistantMessage.id);
     send(res, 'meta', { runId: run.id, messageId: assistantMessage.id, recalled: recalled.length, protocol: 'cochpia.sse.v1', provider: selectedModel.provider, model: selectedModel.model, regeneratedFrom: regeneration?.assistant.id || null, retry, dynamicAlpha: { scores: routing.scores, alphaWork: routing.alphaWork, alphaLove: routing.alphaLove, decision: routing.decision, placement: routing.placements?.[routingMode] || null, isAnchor: routing.isAnchor } }, run);
     let summary = session.summary || '';
     try { const compact = await maybeCompactConversation(session, state.messages[sessionId], selectedModel); summary = compact.summary; if (compact.changed) await saveState(state); }
@@ -272,6 +315,7 @@ export function createChatRuntime(deps) {
     const { sessionId, message, channel } = req.body || {};
     if (!sessionId || !String(message || '').trim()) return fail(res, 400, 'INVALID_REQUEST', 'sessionId and message are required');
     const session = getSession(sessionId);
+    const proceed = armPrepareGuard(res);
     await wakeEngine?.reconcileAll?.();
     if (!session) return fail(res, 404, 'SESSION_NOT_FOUND', 'Session not found');
     const runKey = runtimeKey(sessionId);
@@ -285,9 +329,9 @@ export function createChatRuntime(deps) {
     const chatMemory = chatMemoryForRequest(req); let recalled = []; let memoryBundle = null;
     try { await chatMemory.recordTurn({ eventId: `chat:group:${sessionId}:${userMessage.id}`, content: userMessage.content, eventRole: 'user', channel: activeChannel }); const retrieved = await chatMemory.retrieve(userMessage.content); recalled = retrieved.recalled; memoryBundle = retrieved.bundle; }
     catch (error) { console.error(JSON.stringify({ event: 'group_memory_retrieve_failed', code: error.code || 'MEMORY_MODULE_RETRIEVE_FAILED' })); }
+    if (!proceed()) return;
     const run = { id: randomUUID(), key: runKey, userId: currentUserId(), sessionId, controller: new AbortController(), cancelled: false, finished: false, timedOut: false, sequence: 0, events: [], response: null, connected: false };
-    run.deadline = setTimeout(() => { if (!run.finished) { run.timedOut = true; run.controller.abort(); } }, chatRunTimeoutMs);
-    activeRuns.set(runKey, run); streamRuns.set(run.id, run); attachStreamResponse(run, res); send(res, 'meta', { runId: run.id, sessionId, agents: agentIds, protocol: 'cochpia.group.sse.v1' }, run);
+    activeRuns.set(runKey, run); streamRuns.set(run.id, run); attachStreamResponse(run, res); armRunDeadline(run, res); send(res, 'meta', { runId: run.id, sessionId, agents: agentIds, protocol: 'cochpia.group.sse.v1' }, run);
     const generateAgentReply = async (agent, priorReplies = []) => {
       const reply = { id: randomUUID(), role: 'assistant', content: '', createdAt: new Date().toISOString(), channel: activeChannel, senderId: agent.id, senderName: agent.name, senderAvatar: agentAvatar(agent), ...(agent.avatarImage ? { senderAvatarImage: agent.avatarImage } : {}) };
       send(res, 'agent_start', { agentId: agent.id, senderName: agent.name, messageId: reply.id }, run);
