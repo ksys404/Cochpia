@@ -59,7 +59,7 @@ const parseWakeDecision = value => {
 
 export function createWakeEngine({
   state, saveState, innerContinuity, agents, model, createModelProvider, resolveModelSelection,
-  getSession, chatMemoryForRequest, randomUUID, agentAvatar, buildRuntimeContext
+  getSession, chatMemoryForRequest, randomUUID, agentAvatar, buildRuntimeContext, collectUpcomingEvents
 } = {}) {
   const enabled = process.env.WAKEUP_ENABLED === 'true';
   if (!enabled) {
@@ -151,7 +151,7 @@ export function createWakeEngine({
     if (!wakeModel || typeof wakeModel.generate !== 'function') return { action: 'silent', skipped: true };
     const messages = (state.messages?.[session.id] || []).filter(message => !message.supersededAt).slice(-20);
     const runtimeContext = typeof buildRuntimeContext === 'function'
-      ? buildRuntimeContext({ messages, persona: agent.persona || '', profile: { name: agent.name }, mode: 'companion', innerState: innerContinuity?.snapshot?.(agentId, Date.now()), dynamic: { wakeup: { source: reason, wakeId } } })
+      ? buildRuntimeContext({ messages, upcomingEvents: collectUpcomingEvents?.(agentId) || [], persona: agent.persona || '', profile: { name: agent.name }, mode: 'companion', innerState: innerContinuity?.snapshot?.(agentId, Date.now()), dynamic: { wakeup: { source: reason, wakeId } } })
       : { messages, dynamic: { wakeup: { source: reason, wakeId } } };
     const result = await wakeModel.generate({
       message: '现在是你主动醒来的机会。请作为你自己决定是否想对用户说些什么。只返回 JSON：{"action":"silent"} 或 {"action":"message","message":"..."}。沉默是合法结果，不要因为系统唤醒就强行发消息。',

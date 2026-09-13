@@ -78,11 +78,12 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [channel, setChannel] = useState('默认');
   const [channels, setChannels] = useState([]);
-  // Legacy task/calendar state is retained only to keep old imported layouts inert until redesign.
+  // Legacy task state is retained only to keep old imported layouts inert until redesign;
+  // the calendar (纪念日 / 计划) is live and backed by /api/events.
   const [taskOpen, setTaskOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
   const [tasks] = useState([]);
-  const [events] = useState([]);
+  const [events, setEvents] = useState([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'plan', note: '' });
   const [page, setPageState] = useState('splash');
@@ -228,6 +229,10 @@ function App() {
     try { setAgents(orderAgents(asArray(await api('/api/agents')))); } catch { /* Agent 列表加载失败不阻塞主流程 */ }
   };
 
+  const loadEvents = async () => {
+    try { setEvents(asArray(await api('/api/events'))); } catch { /* 日历加载失败不阻塞主流程 */ }
+  };
+
   const refresh = async () => {
     const [nextSessions, nextMemory, modelCatalog] = await Promise.all([
       api('/api/sessions'), api('/api/memory/overview'), api('/api/models')
@@ -236,6 +241,7 @@ function App() {
     setSessions(safeSessions);
     setMemory({ count: Number(nextMemory?.count) || 0, memories: asArray(nextMemory?.memories) });
     setModels(modelCatalog && Array.isArray(modelCatalog.providers) ? modelCatalog : { defaultProvider: 'mock', providers: [] });
+    await loadEvents();
     if (safeSessions.some(item => item.id === sessionId)) await loadModel(sessionId);
     return safeSessions;
   };
@@ -543,8 +549,24 @@ function App() {
 
   const createTask = event => { event.preventDefault(); setNewTaskTitle(''); setTaskOpen(false); };
   const completeTask = () => {};
-  const createEvent = event => { event.preventDefault(); setNewEvent({ title: '', date: '', type: 'plan', note: '' }); setEventOpen(false); };
-  const removeEvent = () => {};
+  const createEvent = async event => {
+    event.preventDefault();
+    const title = newEvent.title.trim();
+    if (!title || !newEvent.date) return;
+    try {
+      await api('/api/events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, date: newEvent.date, type: newEvent.type, note: newEvent.note })
+      });
+      setNewEvent({ title: '', date: '', type: 'plan', note: '' });
+      setEventOpen(false);
+      await loadEvents();
+    } catch (err) { setError(err.message); }
+  };
+  const removeEvent = async id => {
+    try { await api(`/api/events/${id}`, { method: 'DELETE' }); await loadEvents(); }
+    catch (err) { setError(err.message); }
+  };
 
   const sendMessage = async event => {
     event.preventDefault();
