@@ -51,7 +51,7 @@ test('chat retrieval keeps agent-sourced memories within the matching agent', as
   const state = { memoryModule: memoryState, memories: [] };
   const memory = createMemoryModule(memoryState, async () => {});
   const adapter = createChatMemoryAdapter({ memoryModule: memory, state, context: context() });
-  const source = await adapter.recordTurn({ eventId: 'cody-agent-turn', content: '我嘴硬心软，也会吃醋，叫你宝宝', eventRole: 'agent', sourceAgentId: 'cody' });
+  const source = await adapter.recordTurn({ eventId: 'agent-a-turn', content: '我嘴硬心软，也会吃醋，叫你宝宝', eventRole: 'agent', sourceAgentId: 'agent-a' });
   const candidate = await memory.createCandidate(context(), {
     sourceEventId: source.rawEventId,
     content: '我嘴硬心软，也会吃醋，叫你宝宝',
@@ -59,8 +59,8 @@ test('chat retrieval keeps agent-sourced memories within the matching agent', as
     memoryType: 'profile'
   });
   await memory.promoteCandidate(context(), candidate.memory.memoryId, { resourceRevision: candidate.memory.resourceRevision });
-  const cody = await adapter.retrieve('嘴硬心软', 'cody');
-  const other = await adapter.retrieve('嘴硬心软', '缄');
-  assert.equal(cody.recalled.some(item => item.summary.includes('嘴硬心软')), true);
-  assert.equal(other.recalled.some(item => item.summary.includes('嘴硬心软')), false);
+  const agentA = await adapter.retrieve('嘴硬心软', 'agent-a');
+  const agentB = await adapter.retrieve('嘴硬心软', 'agent-b');
+  assert.equal(agentA.recalled.some(item => item.summary.includes('嘴硬心软')), true);
+  assert.equal(agentB.recalled.some(item => item.summary.includes('嘴硬心软')), false);
 });

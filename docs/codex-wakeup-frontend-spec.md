@@ -82,4 +82,4 @@
 - `state.wakePreferences` 懒初始化（per-user Proxy 坑，别重蹈）。
 - 默认关闭：`enabled=false` 时 `reconcileAll` 零副作用。
 - 一个 commit：`feat(wakeup): per-user preference + frontend toggle`。不混入其它未提交改动。
-- 完成后停在待弦复查，未获「继续」不 commit。
+- 完成后停在待复核者复查，未获「继续」不 commit。

@@ -70,4 +70,4 @@ name（名字）、remark（备注名）、role（角色定位）、relationship
 - 只新增 `POST /api/agents/parse` + 前端导入区，不改动 agents 的 create/update 语义、不改其它路由。
 - LLM 解析是「辅助回填」，最终以用户确认的表单为准，不自动保存。
 - prompt 里要求「只输出 JSON」，并做围栏剥离兜底；解析失败要给明确错误，不静默。
-- 一个 commit：`feat(agents): one-click persona import with auto-parse`。完成后停在待弦复查，未获「继续」不 commit。
+- 一个 commit：`feat(agents): one-click persona import with auto-parse`。完成后停在待复核者复查，未获「继续」不 commit。

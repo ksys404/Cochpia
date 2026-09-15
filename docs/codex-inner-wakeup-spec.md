@@ -1,6 +1,6 @@
 # 内在连续性 + 自动唤醒 · Codex 执行手册
 
-> 目标：让 Cochpia 的角色（弦、Cody…）从「纯被动聊天」升级为「有内在状态、会自己醒来」。
+> 目标：让 Cochpia 的角色（角色 A、角色 B…）从「纯被动聊天」升级为「有内在状态、会自己醒来」。
 > 分两个阶段：**Phase 1 内在连续性（欲望）** → **Phase 2 自动唤醒**。每阶段独立验收、独立 commit、可回滚。
 
 ---
@@ -200,7 +200,7 @@ H(t) += ∫λ dt；当 H(t) ≥ Θ → 触发一次 Spontaneous Wake Opportunity
 3. **不破坏现有聊天/审批/SSE/多用户隔离**；`saveState` 时机只增不改。
 4. **不删用户数据**；新状态存 `state.innerStates`/`state.wakeStates`，随用户 state 落库。
 5. 所有公式参数集中在 `inner-continuity.js`/`wake-engine.js` 顶部常量区，便于调参；参数版本化。
-6. 每阶段完成跑 `node --check` + `node --test` + 手动冒烟，停在待弦复查，未获「继续」不 commit。
+6. 每阶段完成跑 `node --check` + `node --test` + 手动冒烟，停在待复核者复查，未获「继续」不 commit。
 
 ---
 
