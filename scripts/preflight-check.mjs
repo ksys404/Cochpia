@@ -115,6 +115,8 @@ let secretHits = 0;
 for (const dir of scanDirs) {
   const files = listTracked(`${dir}/`).split('\n').filter(Boolean);
   for (const file of files) {
+    // 跳开本文件:它的 SECRET_PATTERNS 里就是这些正则字面量,扫自己会永远误报。
+    if (file === 'scripts/preflight-check.mjs') continue;
     if (/\.(png|jpe?g|gif|webp|mp3|mp4|wav|woff2?|ttf|ico|pdf)$/i.test(file)) continue;
     const content = readFile(file);
     for (const [label, pattern] of SECRET_PATTERNS) {
@@ -152,7 +154,9 @@ if (expectedMissing.length) warn('仓库', `前端引用了被 .gitignore 排除
 if (!missingAssets.length && !expectedMissing.length) ok('仓库', `前端引用的 ${assetRefs.size} 个静态资源都存在且可分发`);
 
 // ─────────────────────── 7. .env.example 覆盖率 ───────────────────────
-// 防止将来新增 process.env.X 却忘了写进示例(别人 clone 下来配不起来)。
+// 防止将来新增环境变量却忘了写进示例(别人 clone 下来配不起来)。
+// 已知的「举例用的占位名」不算真变量。
+const PLACEHOLDER_ENV_NAMES = new Set(['X', 'YOUR_VAR', 'NAME', 'VARIABLE']);
 const declared = new Set();
 for (const line of readFile('.env.example').split('\n')) {
   const match = line.match(/^\s*#?\s*([A-Z][A-Z0-9_]*)\s*=/);
@@ -170,7 +174,7 @@ for (const dir of ['server', 'client/src', 'scripts']) {
 // 由模板拼出来的名字扫描不到,显式补上
 for (const name of flags) used.add(`MEMORY_${name}`);
 // Vite 自带的内置 env(不是需要声明的配置)
-const ignore = new Set(['NODE_ENV', 'NODE_OPTIONS', 'PROD', 'DEV', 'MODE', 'BASE_URL', 'SSR']);
+const ignore = new Set(['NODE_ENV', 'NODE_OPTIONS', 'PROD', 'DEV', 'MODE', 'BASE_URL', 'SSR', ...PLACEHOLDER_ENV_NAMES]);
 const missing = [...used].filter(name => !declared.has(name) && !ignore.has(name)).sort();
 if (missing.length) bad('文档', `.env.example 缺少 ${missing.length} 个实际用到的变量:${missing.slice(0, 12).join(', ')}${missing.length > 12 ? ' …' : ''}`);
 else ok('文档', `.env.example 覆盖了全部 ${used.size} 个实际用到的变量`);
