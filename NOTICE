@@ -1,0 +1,26 @@
+Cochpia
+Copyright 2026 ksys404 (https://github.com/ksys404/Cochpia)
+
+本仓库采用分范围授权 —— 请按下面两条分别理解:
+
+1) 源代码
+   `LICENSE`(Apache License 2.0)适用于本仓库的**源代码**(`server/`、`client/src/`、
+   `scripts/`、配置与文档)。
+
+2) 打包的第三方美术/音频素材(不在 Apache-2.0 覆盖范围内)
+   `client/public/` 下的素材各自保持其原始许可,不受本仓库代码许可影响:
+
+   - Kenney(kenney.nl)系列:Creative Commons Zero(CC0),商用无需署名;
+     包内许可原文见 `client/public/game-assets/licenses/kenney/` 与
+     `client/public/life/kenney-rpg-urban-LICENSE.txt`。
+   - Pipoya(ぴぽや,https://pipoya.net/sozai/):作者条款允许商业/非商业使用、加工与
+     二次分发,但**禁止单独出售素材本身**;实际使用以随包 readme 与作者最新页面为准。
+
+   完整登记、来源链接、核验状态与使用边界见:
+   `client/public/game-assets/licenses/attribution.md`
+
+3) 设计参考(未复制代码)
+   记忆重要性/检索排序的实现参考了若干公开项目的公开设计(Generative Agents、
+   MemoryOS、MemoryBank、A-MEM、mem0、Graphiti 等),仅借鉴思路与权重比例,
+   未复制其代码;具体出处与取舍记录在源码注释与
+   `Knowledge_Base/分析报告/重要性检索参考综述.md`(该目录不入库,仅本地保留)。

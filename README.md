@@ -17,6 +17,19 @@ npm run dev
 - Model catalog: http://localhost:8787/api/models
 - MCP endpoint: POST http://localhost:8787/mcp
 
+## 主要 HTTP 端点
+
+| 分组 | 端点 |
+|---|---|
+| 健康与观测 | `GET /api/health`、`/api/ready`、`/api/version`、`/api/metrics` |
+| 会话与聊天 | `/api/sessions*`、`POST /api/chat/stream`(SSE)、`/api/chat/{approve,cancel,regenerate,retry,group}` |
+| 记忆 | `/api/memories*`、`/api/memory/overview`、`/api/export`、`/api/import`;版本化契约在 `/v1/*` |
+| 日历(日程) | `GET/POST/PATCH/DELETE /api/events`、`GET /api/events/upcoming` |
+| 账号数据权利 | `GET /api/account/export`、`DELETE /api/account?confirm=erase[&mode=forget]` |
+| Agent 工作区 | `/api/workbench/tasks*`、`/api/workflows*` |
+
+日程为当前登录用户所有、可选绑定单个 Agent(不绑定 = 所有 Agent 可见);临近日程会按窗口注入聊天与主动唤醒的上下文。账号擦除必须显式传 `confirm=erase`,先落记忆模块的治理记录再做行级物理擦除。
+
 ## Model configuration
 
 默认使用 `MODEL_PROVIDER=mock`，不会产生云端费用。服务端通过 `GET /api/models` 提供供应商、协议、推荐模型、生产场景注释和 `ready` 状态；前端设置面板可查看目录、测试真实连接并按会话保存模型选择。
@@ -46,6 +59,12 @@ MODEL_TIMEOUT_MS=30000
 - `server/memory-module-runtime.js`: Memory Module 运行时、对外接口和旧数据一次性迁移边界
 - `server/data/state.json`: JSON 本地开发持久化
 - `server/schema.sql`: PostgreSQL 初始状态表
+- `server/events.js`: 日程服务(纪念日/生日按年重复推算 + 临近日程窗口)
+- `server/routes/account.js`: 账号级数据导出与擦除(数据主体权利)
+- `server/memory-importance.js`: 记忆重要性判定(可解释、零模型调用、可复现)
+- `server/memory-module-retrieval.js`: 词法/向量/重要性/新近度的加权 RRF 融合
+- `scripts/preflight-check.mjs`: 上线前自检(配置、密钥、文档覆盖、数据完整性)
+- `.env.example`: **全部环境变量的唯一参照**;`NOTICE`/`LICENSE`: 授权范围
 
 ## Verification
 
@@ -91,3 +110,23 @@ The independent Memory Module is in `services/memory-module/` and exposes the ca
 Railway deployment templates are in `deploy/`. Use the API service health check at `/api/health` and set `VITE_API_BASE_URL` on the separate web service.
 
 真实供应商测试只有在对应服务端环境变量存在时才执行；本地协议夹具和 Mock 流式链路可在无密钥环境验证。
+
+## Environment
+
+所有环境变量的**唯一参照是 [`.env.example`](.env.example)**（含必填/建议/可选标注与默认值）。上线前先跑自检：
+
+```bash
+node scripts/preflight-check.mjs            # 配置 + 仓库卫生 + .env.example 覆盖率 + 数据库与数据完整性
+node scripts/preflight-check.mjs --no-db    # 不连数据库
+```
+
+它会检查生产守卫依赖的 `NODE_ENV=production`、`CLIENT_ORIGIN` 是否为 HTTPS、TLS 配置、记忆功能开关，也会验证**记忆归属与 tenantId 是否一致**（不一致会导致记忆静默不可见），并报告前端引用了却被 `.gitignore` 排除的静态资源。说明与人工项见 [`deploy/preflight.md`](deploy/preflight.md)。
+
+> 测试提示:`server/isolation.test.js` 与 `server/regenerate.test.js` 需要运行中的 API;在没有 `.env` 的全新克隆里会自动 skip,配了 `RUN_API_INTEGRATION=true` 则必须先起服务。
+
+## License
+
+- **源代码**:[Apache License 2.0](LICENSE)。
+- **第三方美术/音频素材**(`client/public/` 下)不受上述许可影响,各自保持原始条款:Kenney 系列为 CC0,Pipoya 允许商用与二次分发但禁止单独转售素材本身。完整来源、核验状态与使用边界见 [`client/public/game-assets/licenses/attribution.md`](client/public/game-assets/licenses/attribution.md);授权范围说明见 [`NOTICE`](NOTICE)。
+- **设计参考**:记忆重要性与检索排序借鉴了若干公开项目的公开设计（Generative Agents、MemoryOS、MemoryBank、A-MEM、mem0、Graphiti 等），仅参考思路与权重比例，未复制其代码。
+
